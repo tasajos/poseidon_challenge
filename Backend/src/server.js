@@ -2,17 +2,20 @@ import express from 'express';
 import cors from 'cors';
 import 'dotenv/config';
 import * as db from './db.js';
-import { ROLES, hashPassword, verificarPassword, crearToken, requiereSesion, requiereRol, limiteIngreso } from './auth.js';
+import { ROLES, hashPassword, verificarPassword, crearToken, requiereSesion, requierePermiso, tienePermiso, limiteIngreso } from './auth.js';
+import { PERMISOS, FIJOS, esPermiso } from './permisos.js';
 import { climatologia } from './power.js';
 import { indicadoresMensuales } from './clima.js';
 import { compararRotaciones, CRITERIOS } from './rotacion.js';
+import * as respaldos from './respaldos.js';
+import { revisarAlertas, programarAlertas, estadoAlertas, UMBRALES } from './alertas.js';
+import { clavePublica, entregar, smsConfigurado, TELEFONO } from './canales.js';
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '50kb' }));
 
-const sesion = requiereSesion(db.usuarioPorId);
-const PERSONAL = ['administrador', 'operativo', 'monitoreo']; // ven las evaluaciones de todos
+const sesion = requiereSesion(db.usuarioPorId, db.permisosDeRol);
 const error = (status, mensaje) => Object.assign(new Error(mensaje), { status });
 const ruta = (fn) => (req, res, next) => fn(req, res).catch(next);
 
@@ -49,7 +52,10 @@ app.post('/api/auth/login', limiteIngreso, ruta(async (req, res) => {
   if (!u || !u.activo || !verificarPassword(req.body?.password || '', u.password_hash)) {
     throw error(401, 'Correo o contraseña incorrectos');
   }
-  res.json({ token: crearToken(u), usuario: { id: u.id, nombre: u.nombre, email: u.email, rol: u.rol } });
+  res.json({
+    token: crearToken(u),
+    usuario: { id: u.id, nombre: u.nombre, email: u.email, rol: u.rol, permisos: await db.permisosDeRol(u.rol) },
+  });
 }));
 
 app.get('/api/auth/yo', sesion, (req, res) => res.json(req.usuario));
@@ -65,7 +71,7 @@ app.get('/api/clima', sesion, ruta(async (req, res) => {
 
 // ---------- Evaluaciones ----------
 // Cuerpo: { nombre?, lat, lon, rotacion: ["papa","maiz"], prioridades: { agua: 0-5, ... } }
-app.post('/api/evaluar', sesion, requiereRol('cliente', 'operativo', 'administrador'), ruta(async (req, res) => {
+app.post('/api/evaluar', sesion, requierePermiso('evaluar'), ruta(async (req, res) => {
   const { rotacion, prioridades = {}, nombre } = req.body || {};
   const [lat, lon] = coordenadas(req.body?.lat, req.body?.lon);
   if (!Array.isArray(rotacion) || rotacion.length < 2 || rotacion.length > 4
@@ -87,31 +93,33 @@ app.post('/api/evaluar', sesion, requiereRol('cliente', 'operativo', 'administra
   res.json({ id, fuenteClima: base.fuente, clima: meses, estrategias });
 }));
 
-const visibles = (u) => db.listarEvaluaciones(PERSONAL.includes(u.rol) ? {} : { usuarioId: u.id });
+// Sin el permiso ver_todas cada persona ve solo sus parcelas. ?propias=1 pide solo las propias.
+const verTodas = (u) => tienePermiso(u, 'ver_todas');
 
 app.get('/api/evaluaciones', sesion, ruta(async (req, res) => {
-  res.json((await visibles(req.usuario)).map(resumir));
+  const propias = req.query.propias === '1' || !verTodas(req.usuario);
+  res.json((await db.listarEvaluaciones(propias ? { usuarioId: req.usuario.id } : {})).map(resumir));
 }));
 
 app.get('/api/evaluaciones/:id', sesion, ruta(async (req, res) => {
   const e = await db.obtenerEvaluacion(req.params.id);
-  if (!e || (!PERSONAL.includes(req.usuario.rol) && e.usuario_id !== req.usuario.id)) {
+  if (!e || (!verTodas(req.usuario) && e.usuario_id !== req.usuario.id)) {
     throw error(404, 'Evaluación no encontrada');
   }
   res.json(e);
 }));
 
-app.patch('/api/evaluaciones/:id/revision', sesion, requiereRol('operativo', 'administrador'), ruta(async (req, res) => {
+app.patch('/api/evaluaciones/:id/revision', sesion, requierePermiso('revisar'), ruta(async (req, res) => {
   const nota = String(req.body?.nota || '').trim().slice(0, 2000);
   if (!nota) throw error(400, 'Escriba una nota técnica');
-  if (!(await db.revisarEvaluacion(req.params.id, { nota, revisorId: req.usuario.id }))) {
-    throw error(404, 'Evaluación no encontrada');
-  }
+  const e = await db.obtenerEvaluacion(req.params.id);
+  if (!e || (!verTodas(req.usuario) && e.usuario_id !== req.usuario.id)) throw error(404, 'Evaluación no encontrada');
+  await db.revisarEvaluacion(req.params.id, { nota, revisorId: req.usuario.id });
   res.json({ ok: true });
 }));
 
-// ---------- Monitoreo ----------
-app.get('/api/monitoreo', sesion, requiereRol(...PERSONAL), ruta(async (_req, res) => {
+// ---------- Monitoreo y reportes regionales ----------
+app.get('/api/monitoreo', sesion, requierePermiso('reportes'), ruta(async (_req, res) => {
   const evaluaciones = (await db.listarEvaluaciones()).map(resumir);
   const usuarios = await db.listarUsuarios();
   const alertas = [];
@@ -139,10 +147,10 @@ app.get('/api/monitoreo', sesion, requiereRol(...PERSONAL), ruta(async (_req, re
   });
 }));
 
-// ---------- Administración ----------
-app.get('/api/usuarios', sesion, requiereRol('administrador'), ruta(async (_req, res) => res.json(await db.listarUsuarios())));
+// ---------- Administración: usuarios ----------
+app.get('/api/usuarios', sesion, requierePermiso('usuarios'), ruta(async (_req, res) => res.json(await db.listarUsuarios())));
 
-app.post('/api/usuarios', sesion, requiereRol('administrador'), ruta(async (req, res) => {
+app.post('/api/usuarios', sesion, requierePermiso('usuarios'), ruta(async (req, res) => {
   const nombre = String(req.body?.nombre || '').trim().slice(0, 80);
   const email = String(req.body?.email || '').trim().toLowerCase();
   const { password, rol } = req.body || {};
@@ -154,7 +162,7 @@ app.post('/api/usuarios', sesion, requiereRol('administrador'), ruta(async (req,
   res.status(201).json({ id });
 }));
 
-app.patch('/api/usuarios/:id', sesion, requiereRol('administrador'), ruta(async (req, res) => {
+app.patch('/api/usuarios/:id', sesion, requierePermiso('usuarios'), ruta(async (req, res) => {
   const { rol, activo } = req.body || {};
   if (rol !== undefined && !ROLES.includes(rol)) throw error(400, 'Rol no válido');
   if (activo !== undefined && typeof activo !== 'boolean') throw error(400, 'Valor de activo no válido');
@@ -163,11 +171,112 @@ app.patch('/api/usuarios/:id', sesion, requiereRol('administrador'), ruta(async 
   res.json({ ok: true });
 }));
 
+// ---------- Administración: roles y permisos ----------
+app.get('/api/permisos', sesion, requierePermiso('usuarios'), ruta(async (_req, res) => {
+  res.json({ catalogo: PERMISOS, roles: ROLES, fijos: FIJOS, matriz: await db.matrizPermisos() });
+}));
+
+app.put('/api/permisos/:rol', sesion, requierePermiso('usuarios'), ruta(async (req, res) => {
+  const { rol } = req.params;
+  const permisos = req.body?.permisos;
+  if (!ROLES.includes(rol)) throw error(404, 'Rol no encontrado');
+  if (!Array.isArray(permisos) || !permisos.every(esPermiso)) throw error(400, 'Lista de permisos no válida');
+  await db.setPermisosRol(rol, permisos);
+  res.json({ rol, permisos: await db.permisosDeRol(rol) });
+}));
+
+// ---------- Administración: respaldos ----------
+app.get('/api/sistema', sesion, requierePermiso('usuarios', 'respaldos'), (_req, res) => {
+  res.json({ base_datos: db.modo(), respaldos: respaldos.estado(), alertas: estadoAlertas(), sms_configurado: smsConfigurado() });
+});
+
+app.get('/api/respaldos', sesion, requierePermiso('respaldos'), ruta(async (_req, res) => {
+  res.json({ estado: respaldos.estado(), respaldos: await respaldos.listar() });
+}));
+
+app.post('/api/respaldos', sesion, requierePermiso('respaldos'), ruta(async (req, res) => {
+  res.status(201).json(await respaldos.crearRespaldo('manual', req.usuario.email));
+}));
+
+// Exige repetir el nombre del respaldo en el cuerpo, para que no se restaure por un clic accidental.
+app.post('/api/respaldos/:nombre/restaurar', sesion, requierePermiso('respaldos'), ruta(async (req, res) => {
+  if (req.body?.confirmacion !== req.params.nombre) throw error(400, 'Confirme escribiendo el nombre del respaldo');
+  res.json(await respaldos.restaurar(req.params.nombre, req.usuario.email));
+}));
+
+// ---------- Alertas climáticas del usuario ----------
+// Solo se aceptan suscripciones de los servicios de notificación de los navegadores.
+const SERVICIOS_PUSH = [/\.googleapis\.com$/, /\.mozilla\.com$/, /\.notify\.windows\.com$/, /\.push\.apple\.com$/];
+const recientes = new Map(); // usuario → última revisión manual (máximo una por minuto)
+
+app.get('/api/alertas', sesion, requierePermiso('alertas'), ruta(async (req, res) => {
+  const id = req.usuario.id;
+  const [preferencias, historial, dispositivos, parcelas] = await Promise.all([
+    db.getPreferencias(id), db.listarAlertas(id), db.listarSuscripciones(id), db.parcelasParaAlertas({ usuarioId: id }),
+  ]);
+  res.json({
+    preferencias, historial,
+    dispositivos: dispositivos.length,
+    lugares: new Set(parcelas.map((p) => `${p.lat.toFixed(2)},${p.lon.toFixed(2)}`)).size,
+    clave_push: await clavePublica(),
+    sms_configurado: smsConfigurado(),
+    umbrales: UMBRALES,
+    revision: estadoAlertas(),
+  });
+}));
+
+app.put('/api/alertas/preferencias', sesion, requierePermiso('alertas'), ruta(async (req, res) => {
+  const b = req.body || {};
+  for (const k of ['helada', 'sequia', 'web', 'sms']) {
+    if (typeof b[k] !== 'boolean') throw error(400, `Valor no válido para ${k}`);
+  }
+  const telefono = String(b.telefono || '').replace(/[\s-]/g, '') || null;
+  if (telefono && !TELEFONO.test(telefono)) throw error(400, 'Escriba el teléfono con código de país, por ejemplo +59170000000');
+  if (b.sms && !telefono) throw error(400, 'Para recibir SMS indique su número de teléfono');
+  const prefs = { helada: b.helada, sequia: b.sequia, web: b.web, sms: b.sms, telefono };
+  await db.setPreferencias(req.usuario.id, prefs);
+  res.json(prefs);
+}));
+
+app.post('/api/alertas/suscripcion', sesion, requierePermiso('alertas'), ruta(async (req, res) => {
+  const { endpoint, keys } = req.body || {};
+  let host;
+  try { host = new URL(endpoint).hostname; } catch { throw error(400, 'Suscripción no válida'); }
+  if (!String(endpoint).startsWith('https://') || endpoint.length > 500 || !SERVICIOS_PUSH.some((r) => r.test(host))
+    || typeof keys?.p256dh !== 'string' || keys.p256dh.length > 200 || typeof keys?.auth !== 'string' || keys.auth.length > 100) {
+    throw error(400, 'Suscripción no válida');
+  }
+  await db.guardarSuscripcion({ usuarioId: req.usuario.id, endpoint, p256dh: keys.p256dh, auth: keys.auth });
+  res.status(201).json({ ok: true });
+}));
+
+app.delete('/api/alertas/suscripcion', sesion, requierePermiso('alertas'), ruta(async (req, res) => {
+  await db.borrarSuscripcion(String(req.body?.endpoint || ''), req.usuario.id);
+  res.json({ ok: true });
+}));
+
+app.post('/api/alertas/prueba', sesion, requierePermiso('alertas'), ruta(async (req, res) => {
+  const prefs = await db.getPreferencias(req.usuario.id);
+  const alerta = { tipo: 'prueba', titulo: 'Alerta de prueba', mensaje: 'Así llegarán los avisos de helada y sequía de Poseidon.' };
+  const canales = await entregar(req.usuario.id, prefs, alerta);
+  await db.registrarAlerta({ usuarioId: req.usuario.id, clave: `prueba:${Date.now()}`, canales, ...alerta });
+  res.json({ canales });
+}));
+
+app.post('/api/alertas/revisar', sesion, requierePermiso('alertas'), ruta(async (req, res) => {
+  const id = req.usuario.id;
+  if (Date.now() - (recientes.get(id) || 0) < 60e3) throw error(429, 'Espere un minuto antes de volver a revisar');
+  recientes.set(id, Date.now());
+  res.json(await revisarAlertas({ usuarioId: id }));
+}));
+
 app.use((err, _req, res, _next) => {
   if (!err.status) console.error(err);
   res.status(err.status || 500).json({ error: err.status ? err.message : 'Error interno' });
 });
 
 await db.iniciar();
+await respaldos.programar();
+programarAlertas();
 const puerto = Number(process.env.PORT || 3001);
 app.listen(puerto, () => console.log(`API Poseidon en http://localhost:${puerto} (datos: ${db.modo()})`));

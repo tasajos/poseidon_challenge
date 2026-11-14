@@ -6,16 +6,52 @@ El agricultor marca su parcela, indica su rotación actual y sus prioridades, y 
 compara **tres estrategias de rotación** (la actual, un ajuste y un cambio mayor). Para cada una
 muestra por qué se sugiere, la evidencia, los riesgos y lo que el análisis no sabe.
 
-## Roles y paneles
+## Roles, permisos y vistas
 
-| Rol | Panel |
-|---|---|
-| Cliente | Compara rotaciones de sus parcelas y ve sus evaluaciones con la nota del técnico |
-| Operativo | Revisa las evaluaciones de los agricultores y deja una nota técnica |
-| Monitoreo | Tablero de solo lectura: indicadores, mapa de parcelas, alertas y actividad |
-| Administrador | Gestiona usuarios (alta, rol, acceso) y consulta el catálogo y el estado del sistema |
+El acceso se controla por **permisos** (RBAC). Cada rol tiene un conjunto de permisos que el administrador
+edita en *Administración → Roles y permisos*. El menú muestra solo las vistas permitidas y el servidor
+comprueba el permiso en cada petición, así que un cambio rige de inmediato, incluso en sesiones abiertas.
+
+| Permiso | Vista o acción | Por defecto |
+|---|---|---|
+| `evaluar` | Mi finca: comparar rotaciones de sus parcelas | cliente |
+| `ver_todas` | Ver parcelas y evaluaciones de todos (sin él, solo las propias) | operativo, monitoreo, administrador |
+| `revisar` | Revisión técnica: nota para el agricultor | operativo, administrador |
+| `reportes` | Monitoreo: tablero y reporte regional | operativo, monitoreo, administrador |
+| `alertas` | Alertas climáticas en el teléfono | cliente, operativo, monitoreo |
+| `usuarios` | Usuarios, roles y permisos (fijo para el administrador) | administrador |
+| `respaldos` | Crear y restaurar respaldos | administrador |
 
 La interfaz es responsive (escritorio y teléfono). Paleta: azul, naranja, amarillo y vino; tipografía Nunito.
+
+## Respaldos
+
+Cada día a la hora `BACKUP_HORA` (03:00 por defecto) el backend guarda un respaldo JSON de usuarios,
+permisos, parcelas, evaluaciones y alertas en `Backend/respaldos/` y conserva los `BACKUP_RETENER` más
+recientes. Si el servidor estaba apagado a esa hora, lo hace al arrancar. Desde *Administración → Respaldos*
+se crea un respaldo manual o se restaura uno: hay que escribir su nombre para confirmar, y antes se guarda
+el estado actual (`previo-…`) para poder deshacer. No se restaura un respaldo sin un administrador activo.
+Funciona igual en modo memoria, así que sirve para recuperar los datos de una demo tras reiniciar.
+
+Los archivos contienen hashes de contraseñas: la carpeta está fuera de git y conviene copiarla a otro disco.
+
+## Alertas climáticas
+
+Cada `ALERTAS_CADA_HORAS` (6 por defecto) el backend consulta los datos **diarios** de NASA POWER de cada
+parcela y avisa por notificación web (Web Push) y/o SMS:
+
+- **Helada**: alguna mínima de los últimos 3 días publicados ≤ `ALERTA_HELADA_C` (0 °C).
+- **Sequía severa**: lluvia de los últimos 30 días < `ALERTA_SEQUIA_PCT` (30 %) de lo normal para esas fechas
+  según la climatología de POWER; no se evalúa cuando lo normal es casi no llover (época seca).
+
+Cada persona elige en la vista *Alertas* qué tipos y canales quiere, puede enviarse una alerta de prueba y
+revisar sus parcelas al momento. Una misma helada (por día) o sequía (por semana) no se avisa dos veces.
+
+- POWER publica los datos diarios con 2 a 4 días de retraso y no da pronósticos: las alertas avisan de
+  condiciones ya medidas que suelen repetirse, no de eventos futuros.
+- Las notificaciones web necesitan https o `localhost`; desde la IP de la red local el navegador no las permite.
+  En iPhone hay que agregar el sitio a la pantalla de inicio.
+- Sin `TWILIO_*` en `.env` los SMS se simulan: se escriben en la consola y en el historial.
 
 ## Cómo funciona
 
@@ -62,15 +98,24 @@ Sin conexión a NASA POWER usa un clima de demostración de Cochabamba y la inte
 
 Todas las rutas, salvo el ingreso, requieren `Authorization: Bearer <token>`.
 
-| Método | Ruta | Roles | Descripción |
+| Método | Ruta | Permiso | Descripción |
 |---|---|---|---|
-| POST | `/api/auth/login` | público | Ingreso con correo y contraseña |
-| GET | `/api/cultivos`, `/api/clima?lat=&lon=` | todos | Catálogo e indicadores de clima |
-| POST | `/api/evaluar` | cliente, operativo, administrador | Compara rotaciones y guarda la evaluación |
-| GET | `/api/evaluaciones`, `/api/evaluaciones/:id` | todos | El cliente ve solo las suyas |
-| PATCH | `/api/evaluaciones/:id/revision` | operativo, administrador | Marca como revisada con una nota |
-| GET | `/api/monitoreo` | monitoreo, operativo, administrador | Totales, alertas y actividad |
-| GET, POST, PATCH | `/api/usuarios` | administrador | Gestión de usuarios |
+| POST | `/api/auth/login` | público | Ingreso; devuelve el usuario con sus permisos |
+| GET | `/api/auth/yo` | sesión | Usuario y permisos vigentes |
+| GET | `/api/cultivos`, `/api/clima?lat=&lon=` | sesión | Catálogo e indicadores de clima |
+| POST | `/api/evaluar` | evaluar | Compara rotaciones y guarda la evaluación |
+| GET | `/api/evaluaciones`, `/api/evaluaciones/:id` | sesión | Sin `ver_todas`, solo las propias; `?propias=1` las pide aunque lo tenga |
+| PATCH | `/api/evaluaciones/:id/revision` | revisar | Marca como revisada con una nota |
+| GET | `/api/monitoreo` | reportes | Totales, alertas y actividad |
+| GET, POST, PATCH | `/api/usuarios` | usuarios | Gestión de usuarios |
+| GET, PUT | `/api/permisos`, `/api/permisos/:rol` | usuarios | Matriz de permisos por rol |
+| GET | `/api/sistema` | usuarios o respaldos | Estado de base, respaldos y alertas |
+| GET, POST | `/api/respaldos` | respaldos | Lista y crea respaldos |
+| POST | `/api/respaldos/:nombre/restaurar` | respaldos | Restaura; cuerpo `{ "confirmacion": "<nombre>" }` |
+| GET | `/api/alertas` | alertas | Preferencias, historial y clave Web Push |
+| PUT | `/api/alertas/preferencias` | alertas | Tipos (helada, sequía) y canales (web, SMS) |
+| POST, DELETE | `/api/alertas/suscripcion` | alertas | Registra o quita este navegador |
+| POST | `/api/alertas/prueba`, `/api/alertas/revisar` | alertas | Alerta de prueba; revisión inmediata |
 
 ## Límites conocidos
 

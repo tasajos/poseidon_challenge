@@ -57,3 +57,50 @@ CREATE TABLE IF NOT EXISTS evaluaciones (
   FOREIGN KEY (parcela_id) REFERENCES parcelas(id) ON DELETE CASCADE,
   FOREIGN KEY (revisado_por) REFERENCES usuarios(id) ON DELETE SET NULL
 );
+
+-- ---------- Permisos por rol (HU-ADM-04) ----------
+-- El administrador edita esta matriz desde su panel. npm run seed carga los valores por defecto
+-- (Backend/src/permisos.js) solo si la tabla está vacía. El backend crea estas tablas al arrancar si faltan.
+CREATE TABLE IF NOT EXISTS rol_permisos (
+  rol ENUM('administrador','operativo','cliente','monitoreo') NOT NULL,
+  permiso VARCHAR(30) NOT NULL,            -- evaluar, ver_todas, revisar, reportes, alertas, usuarios, respaldos
+  PRIMARY KEY (rol, permiso)
+);
+
+-- ---------- Alertas climáticas (HU-USR-03) ----------
+CREATE TABLE IF NOT EXISTS preferencias_alertas (
+  usuario_id INT PRIMARY KEY,
+  helada BOOLEAN NOT NULL DEFAULT TRUE,    -- tipos de alerta que la persona quiere recibir
+  sequia BOOLEAN NOT NULL DEFAULT TRUE,
+  web BOOLEAN NOT NULL DEFAULT TRUE,       -- canales
+  sms BOOLEAN NOT NULL DEFAULT FALSE,
+  telefono VARCHAR(20) NULL,               -- formato internacional, +59170000000
+  actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+);
+
+-- Navegadores (teléfono o computadora) que aceptaron notificaciones web
+CREATE TABLE IF NOT EXISTS suscripciones_push (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  usuario_id INT NOT NULL,
+  endpoint VARCHAR(500) NOT NULL UNIQUE,
+  p256dh VARCHAR(200) NOT NULL,
+  auth VARCHAR(100) NOT NULL,
+  creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+);
+
+-- Historial de alertas enviadas; "clave" evita repetir la misma alerta
+CREATE TABLE IF NOT EXISTS alertas_enviadas (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  usuario_id INT NOT NULL,
+  parcela_id INT NULL,
+  tipo VARCHAR(20) NOT NULL,               -- helada, sequia, prueba
+  clave VARCHAR(120) NOT NULL,
+  titulo VARCHAR(120) NOT NULL,
+  mensaje TEXT NOT NULL,
+  canales JSON NOT NULL,                   -- [{canal:"web", estado:"enviado"}, {canal:"sms", ...}]
+  creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY una_vez (usuario_id, clave),
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+);

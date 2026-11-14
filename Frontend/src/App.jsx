@@ -1,33 +1,58 @@
 import { useEffect, useState } from 'react';
 import { api, hayToken, setToken } from './api.js';
-import { Logo } from './componentes.jsx';
+import { Logo, puede } from './componentes.jsx';
 import Login from './paginas/Login.jsx';
 import Cliente from './paginas/Cliente.jsx';
 import Operativo from './paginas/Operativo.jsx';
 import Monitoreo from './paginas/Monitoreo.jsx';
 import Admin from './paginas/Admin.jsx';
+import Alertas from './paginas/Alertas.jsx';
 
-const PANELES = {
-  administrador: { Panel: Admin, titulo: 'Administración', bajada: 'Usuarios, catálogo y estado del sistema' },
-  operativo: { Panel: Operativo, titulo: 'Revisión técnica', bajada: 'Evaluaciones de los agricultores por validar' },
-  cliente: { Panel: Cliente, titulo: 'Mi finca', bajada: 'Compare rotaciones para su parcela' },
-  monitoreo: { Panel: Monitoreo, titulo: 'Monitoreo', bajada: 'Parcelas, alertas y actividad' },
-};
+// Cada vista exige al menos uno de sus permisos. El menú muestra solo las vistas permitidas;
+// el backend vuelve a comprobar cada permiso en cada petición.
+const MODULOS = [
+  { clave: 'finca', permisos: ['evaluar'], Panel: Cliente, menu: 'Mi finca', titulo: 'Mi finca', bajada: 'Compare rotaciones para su parcela' },
+  { clave: 'revision', permisos: ['revisar'], Panel: Operativo, menu: 'Revisión', titulo: 'Revisión técnica', bajada: 'Evaluaciones de los agricultores por validar' },
+  { clave: 'monitoreo', permisos: ['reportes'], Panel: Monitoreo, menu: 'Monitoreo', titulo: 'Monitoreo', bajada: 'Reporte regional: parcelas, alertas y actividad' },
+  { clave: 'alertas', permisos: ['alertas'], Panel: Alertas, menu: 'Alertas', titulo: 'Alertas climáticas', bajada: 'Avisos de helada y sequía en su teléfono' },
+  { clave: 'admin', permisos: ['usuarios', 'respaldos'], Panel: Admin, menu: 'Administración', titulo: 'Administración', bajada: 'Usuarios, permisos, respaldos y sistema' },
+];
+const INICIO = { cliente: 'finca', operativo: 'revision', monitoreo: 'monitoreo', administrador: 'admin' };
+
+function modulosDe(usuario) {
+  const lista = MODULOS.filter((m) => m.permisos.some((p) => puede(usuario, p)));
+  const inicio = lista.find((m) => m.clave === INICIO[usuario.rol]);
+  return inicio ? [inicio, ...lista.filter((m) => m !== inicio)] : lista;
+}
 
 export default function App() {
   const [usuario, setUsuario] = useState(null);
   const [listo, setListo] = useState(!hayToken());
+  const [activo, setActivo] = useState(null);
 
   useEffect(() => {
     if (!hayToken()) return;
     api.yo().then(setUsuario).catch(() => setToken(null)).finally(() => setListo(true));
   }, []);
 
-  const salir = () => { setToken(null); setUsuario(null); };
+  // Al volver a la pestaña se releen los permisos: si el administrador quitó uno, la vista desaparece.
+  useEffect(() => {
+    if (!usuario) return undefined;
+    const refrescar = () => {
+      if (document.visibilityState !== 'visible') return;
+      api.yo().then(setUsuario).catch((e) => { if (e.status === 401) salir(); });
+    };
+    document.addEventListener('visibilitychange', refrescar);
+    return () => document.removeEventListener('visibilitychange', refrescar);
+  }, [usuario?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function salir() { setToken(null); setUsuario(null); setActivo(null); }
   if (!listo) return <p className="cargando">Cargando…</p>;
   if (!usuario) return <Login onIngreso={(r) => { setToken(r.token); setUsuario(r.usuario); }} />;
 
-  const { Panel, titulo, bajada } = PANELES[usuario.rol];
+  const modulos = modulosDe(usuario);
+  const modulo = modulos.find((m) => m.clave === activo) || modulos[0];
+
   return (
     <div className={`pagina rol-${usuario.rol}`}>
       <header className="cabecera">
@@ -37,11 +62,27 @@ export default function App() {
           <button className="salir" onClick={salir}>Salir</button>
         </div>
       </header>
-      <div className="titulo-panel">
-        <h1>{titulo}</h1>
-        <p>{bajada}</p>
-      </div>
-      <main><Panel usuario={usuario} /></main>
+      {modulos.length > 1 && (
+        <nav className="modulos" aria-label="Secciones">
+          <div>
+            {modulos.map((m) => (
+              <button key={m.clave} className={m === modulo ? 'activa' : ''} aria-current={m === modulo ? 'page' : undefined}
+                onClick={() => setActivo(m.clave)}>{m.menu}</button>
+            ))}
+          </div>
+        </nav>
+      )}
+      {modulo ? (
+        <>
+          <div className="titulo-panel">
+            <h1>{modulo.titulo}</h1>
+            <p>{modulo.bajada}</p>
+          </div>
+          <main><modulo.Panel key={modulo.clave} usuario={usuario} /></main>
+        </>
+      ) : (
+        <main><p className="vacio">Su rol no tiene vistas asignadas. Pida al administrador que le otorgue permisos.</p></main>
+      )}
       <footer>Poseidon apoya la decisión; no reemplaza el criterio del agricultor ni de un técnico local. Datos de clima: NASA POWER.</footer>
     </div>
   );

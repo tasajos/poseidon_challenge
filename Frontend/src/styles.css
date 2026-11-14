@@ -162,6 +162,63 @@ summary { cursor: pointer; color: var(--suave); font-weight: 600; }
 .login-form h2 { font-size: 28px; color: var(--vino); }
 .login-form .suave { margin-top: 16px; }
 
+
+/* ---------- Menú de secciones (según permisos) ---------- */
+.modulos { background: var(--azul-osc); }
+.modulos > div { max-width: 1400px; margin: 0 auto; padding: 0 16px; display: flex; gap: 4px; overflow-x: auto; }
+.modulos button { background: none; border: 0; color: rgba(255, 255, 255, .8); font-weight: 700; padding: 10px 14px; min-height: 46px; white-space: nowrap; border-bottom: 4px solid transparent; }
+.modulos button:hover { color: #fff; }
+.modulos button.activa { color: #fff; border-bottom-color: var(--amarillo); }
+
+/* ---------- Interruptores ---------- */
+.interruptor { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--linea); cursor: pointer; }
+.interruptor input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.interruptor .riel { flex: none; width: 46px; height: 26px; border-radius: 99px; background: var(--linea); position: relative; transition: background .15s; }
+.interruptor .riel::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, .25); transition: transform .15s; }
+.interruptor input:checked + .riel { background: var(--azul); }
+.interruptor input:checked + .riel::after { transform: translateX(20px); }
+.interruptor input:focus-visible + .riel { outline: 3px solid var(--naranja); outline-offset: 2px; }
+.interruptor .texto { display: grid; font-size: 15px; }
+.interruptor small { color: var(--suave); font-size: 13px; }
+.interruptor.apagado { opacity: .5; cursor: not-allowed; }
+
+/* ---------- Matriz de permisos ---------- */
+.matriz th[scope=row] { font-weight: 600; white-space: normal; min-width: 220px; }
+.matriz td { text-align: center; }
+.matriz .rol-col { text-align: center; white-space: normal; border-bottom: 4px solid var(--azul); }
+.matriz .rol-col.tono-naranja { border-bottom-color: var(--naranja); }
+.matriz .rol-col.tono-amarillo { border-bottom-color: var(--amarillo); }
+.matriz .rol-col.tono-vino { border-bottom-color: var(--vino); }
+.matriz input[type=checkbox] { width: 22px; height: 22px; min-height: 0; margin: 0; accent-color: var(--azul); cursor: pointer; }
+.matriz input[type=checkbox]:disabled { cursor: not-allowed; }
+
+/* ---------- Respaldos ---------- */
+.respaldos { display: grid; gap: 8px; margin-top: 8px; }
+.respaldos li { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: center; border: 1.5px solid var(--linea); border-radius: 12px; padding: 10px 12px; }
+.respaldos li.activo { border-color: var(--vino); background: var(--vino-claro); }
+.respaldos li > div { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.respaldos li small { color: var(--suave); font-size: 13px; grid-column: 1; }
+.respaldos li button { grid-row: 1 / span 2; grid-column: 2; }
+.respaldos .problema { color: var(--vino); }
+.etiqueta { font-size: 12px; font-weight: 700; padding: 1px 9px; border-radius: 99px; background: var(--azul-claro); color: var(--azul-osc); }
+.etiqueta.manual { background: var(--amarillo-claro); color: var(--tinta); }
+.etiqueta.previo { background: var(--naranja-claro); color: var(--tinta); }
+.caja.peligro { border-top: 6px solid var(--vino); }
+.principal.peligro { background: var(--vino); color: #fff; }
+.principal.peligro:hover { background: #631832; }
+.principal.peligro:disabled { cursor: not-allowed; }
+.nombre-respaldo { display: block; margin-top: 4px; font: 600 13px/1.4 ui-monospace, Consolas, monospace; background: var(--fondo); border: 1px dashed var(--linea); border-radius: 8px; padding: 4px 8px; word-break: break-all; user-select: all; }
+.ficha.compacta { grid-template-columns: 110px 1fr; }
+.secundario.ancho { width: 100%; }
+
+/* ---------- Alertas del usuario ---------- */
+.alertas li small { color: var(--suave); font-size: 12px; margin-top: 2px; }
+.alertas li.sequia { border-left-color: var(--naranja); background: var(--naranja-claro); }
+.alertas li.prueba { border-left-color: var(--suave); background: var(--fondo); }
+.dispositivo { font-weight: 700; margin-top: 8px; display: flex; align-items: center; gap: 8px; }
+.dispositivo::before { content: ''; width: 12px; height: 12px; border-radius: 50%; background: var(--linea); }
+.dispositivo.si::before { background: #2e9e5b; }
+
 /* ---------- Pantallas chicas ---------- */
 @media (max-width: 900px) {
   .comparador, .dos-columnas, .dos-columnas.ancha, .dos-columnas.inversa { grid-template-columns: minmax(0, 1fr); }

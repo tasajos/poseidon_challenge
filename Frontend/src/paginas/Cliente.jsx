@@ -10,7 +10,7 @@ const PRIORIDADES = [
 export default function Cliente() {
   const [vista, setVista] = useState('comparar');
   const [abierta, setAbierta] = useState(null);
-  const historial = useDatos(api.evaluaciones);
+  const historial = useDatos(api.misEvaluaciones);
   const items = historial.datos || [];
 
   return (

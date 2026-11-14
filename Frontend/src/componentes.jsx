@@ -5,6 +5,19 @@ import { api } from './api.js';
 const CRITERIOS = { agua: 'Agua', clima: 'Heladas', suelo: 'Suelo', ingreso: 'Ingreso', forraje: 'Forraje' };
 export const COCHABAMBA = [-17.3895, -66.1568];
 export const fecha = (d) => new Date(d).toLocaleDateString('es-BO', { day: 'numeric', month: 'short', year: 'numeric' });
+export const fechaHora = (d) => new Date(d).toLocaleString('es-BO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+export const puede = (usuario, permiso) => Boolean(usuario?.permisos?.includes(permiso));
+
+// Interruptor accesible (checkbox con estilo de botón deslizante).
+export function Interruptor({ marcado, onCambiar, children, detalle, disabled }) {
+  return (
+    <label className={`interruptor ${disabled ? 'apagado' : ''}`}>
+      <input type="checkbox" role="switch" checked={marcado} disabled={disabled} onChange={(e) => onCambiar(e.target.checked)} />
+      <span className="riel" aria-hidden="true" />
+      <span className="texto"><b>{children}</b>{detalle && <small>{detalle}</small>}</span>
+    </label>
+  );
+}
 
 // Carga datos al montar y permite recargar.
 export function useDatos(cargar, dependencias = []) {

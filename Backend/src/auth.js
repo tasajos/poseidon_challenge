@@ -24,8 +24,10 @@ export function verificarPassword(clave, guardado) {
 
 export const crearToken = (u) => jwt.sign({ id: u.id, rol: u.rol }, SECRETO, { expiresIn: '12h' });
 
-// Middleware: exige sesión válida y usuario activo. buscarUsuario(id) viene de db.js.
-export function requiereSesion(buscarUsuario) {
+// Middleware: exige sesión válida y usuario activo, y adjunta los permisos vigentes de su rol.
+// buscarUsuario(id) y permisosDeRol(rol) vienen de db.js. Los permisos se leen en cada petición,
+// así un cambio del administrador rige de inmediato, sin volver a ingresar.
+export function requiereSesion(buscarUsuario, permisosDeRol) {
   return async (req, res, next) => {
     try {
       const token = (req.headers.authorization || '').replace(/^Bearer /, '');
@@ -33,15 +35,25 @@ export function requiereSesion(buscarUsuario) {
       const u = await buscarUsuario(id);
       if (!u || !u.activo) throw new Error('inactivo');
       req.usuario = { id: u.id, nombre: u.nombre, email: u.email, rol: u.rol };
-      next();
     } catch {
-      res.status(401).json({ error: 'Sesión no válida. Ingrese de nuevo.' });
+      return res.status(401).json({ error: 'Sesión no válida. Ingrese de nuevo.' });
+    }
+    try {
+      req.usuario.permisos = await permisosDeRol(req.usuario.rol);
+      next();
+    } catch (e) {
+      next(e);
     }
   };
 }
 
-export const requiereRol = (...roles) => (req, res, next) => (
-  roles.includes(req.usuario.rol) ? next() : res.status(403).json({ error: 'Su rol no tiene permiso para esto.' })
+export const tienePermiso = (u, permiso) => u.permisos.includes(permiso);
+
+// Exige al menos uno de los permisos indicados.
+export const requierePermiso = (...permisos) => (req, res, next) => (
+  permisos.some((p) => tienePermiso(req.usuario, p))
+    ? next()
+    : res.status(403).json({ error: 'Su rol no tiene permiso para esto.' })
 );
 
 // Límite simple de intentos de ingreso por IP (en memoria).

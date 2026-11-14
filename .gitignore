@@ -2,3 +2,5 @@ node_modules/
 dist/
 .env
 *.log
+Backend/respaldos/
+Backend/.vapid.json
