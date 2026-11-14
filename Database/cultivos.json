@@ -1,0 +1,12 @@
+[
+  {"codigo":"papa","nombre":"Papa","familia":"Solanáceas","ciclo_dias":150,"mes_siembra":10,"kc":0.90,"tolerancia_helada":0,"fija_nitrogeno":false,"raiz_profunda":false,"forraje":false,"valor_mercado":3},
+  {"codigo":"maiz","nombre":"Maíz","familia":"Gramíneas","ciclo_dias":160,"mes_siembra":10,"kc":0.90,"tolerancia_helada":0,"fija_nitrogeno":false,"raiz_profunda":true,"forraje":true,"valor_mercado":2},
+  {"codigo":"haba","nombre":"Haba","familia":"Leguminosas","ciclo_dias":180,"mes_siembra":8,"kc":0.85,"tolerancia_helada":2,"fija_nitrogeno":true,"raiz_profunda":false,"forraje":false,"valor_mercado":2},
+  {"codigo":"tarwi","nombre":"Tarwi","familia":"Leguminosas","ciclo_dias":210,"mes_siembra":10,"kc":0.80,"tolerancia_helada":1,"fija_nitrogeno":true,"raiz_profunda":true,"forraje":false,"valor_mercado":1},
+  {"codigo":"quinua","nombre":"Quinua","familia":"Amarantáceas","ciclo_dias":170,"mes_siembra":10,"kc":0.80,"tolerancia_helada":1,"fija_nitrogeno":false,"raiz_profunda":true,"forraje":false,"valor_mercado":3},
+  {"codigo":"trigo","nombre":"Trigo","familia":"Gramíneas","ciclo_dias":150,"mes_siembra":12,"kc":0.85,"tolerancia_helada":1,"fija_nitrogeno":false,"raiz_profunda":false,"forraje":false,"valor_mercado":2},
+  {"codigo":"cebada","nombre":"Cebada","familia":"Gramíneas","ciclo_dias":140,"mes_siembra":12,"kc":0.85,"tolerancia_helada":2,"fija_nitrogeno":false,"raiz_profunda":false,"forraje":true,"valor_mercado":1},
+  {"codigo":"avena","nombre":"Avena forrajera","familia":"Gramíneas","ciclo_dias":120,"mes_siembra":12,"kc":0.85,"tolerancia_helada":2,"fija_nitrogeno":false,"raiz_profunda":false,"forraje":true,"valor_mercado":1},
+  {"codigo":"alfalfa","nombre":"Alfalfa","familia":"Leguminosas","ciclo_dias":365,"mes_siembra":10,"kc":0.95,"tolerancia_helada":2,"fija_nitrogeno":true,"raiz_profunda":true,"forraje":true,"valor_mercado":2},
+  {"codigo":"cebolla","nombre":"Cebolla","familia":"Aliáceas","ciclo_dias":150,"mes_siembra":4,"kc":0.90,"tolerancia_helada":1,"fija_nitrogeno":false,"raiz_profunda":false,"forraje":false,"valor_mercado":3}
+]
