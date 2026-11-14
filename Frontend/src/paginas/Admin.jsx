@@ -32,7 +32,11 @@ export default function Admin({ usuario }) {
           <h2>Estado del sistema</h2>
           <dl className="ficha">
             <dt>Base de datos</dt>
-            <dd>{t.base_datos === 'mysql' ? 'MySQL conectado' : 'Modo memoria: los datos se pierden al reiniciar'}</dd>
+            <dd>
+              {t.base_datos === 'mysql' && 'MySQL conectado'}
+              {t.base_datos === 'sqlite' && 'SQLite conectado (Database/poseidon.db · persistente)'}
+              {t.base_datos !== 'mysql' && t.base_datos !== 'sqlite' && 'Modo memoria: los datos se pierden al reiniciar'}
+            </dd>
             <dt>Evaluaciones</dt><dd>{t.totales.evaluaciones} en total, {t.totales.pendientes} pendientes de revisión</dd>
             <dt>Clima</dt>
             <dd>{t.fuentes_clima['nasa-power'] || 0} con NASA POWER, {t.fuentes_clima.demo || 0} con clima de demostración</dd>
