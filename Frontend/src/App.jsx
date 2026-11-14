@@ -7,8 +7,9 @@ import Operativo from './paginas/Operativo.jsx';
 import Monitoreo from './paginas/Monitoreo.jsx';
 import Admin from './paginas/Admin.jsx';
 import Alertas from './paginas/Alertas.jsx';
+import Glosario from './paginas/Glosario.jsx';
 
-// Cada vista exige al menos uno de sus permisos. El menú muestra solo las vistas permitidas;
+// Cada vista exige al menos uno de sus permisos (el glosario, ninguno). El menú muestra solo las vistas permitidas;
 // el backend vuelve a comprobar cada permiso en cada petición.
 const MODULOS = [
   { clave: 'finca', permisos: ['evaluar'], Panel: Cliente, menu: 'Mi finca', titulo: 'Mi finca', bajada: 'Compare rotaciones para su parcela' },
@@ -16,11 +17,12 @@ const MODULOS = [
   { clave: 'monitoreo', permisos: ['reportes'], Panel: Monitoreo, menu: 'Monitoreo', titulo: 'Monitoreo', bajada: 'Reporte regional: parcelas, alertas y actividad' },
   { clave: 'alertas', permisos: ['alertas'], Panel: Alertas, menu: 'Alertas', titulo: 'Alertas climáticas', bajada: 'Avisos de helada y sequía en su teléfono' },
   { clave: 'admin', permisos: ['usuarios', 'respaldos'], Panel: Admin, menu: 'Administración', titulo: 'Administración', bajada: 'Usuarios, permisos, respaldos y sistema' },
+  { clave: 'glosario', permisos: [], Panel: Glosario, menu: 'Glosario', titulo: 'Glosario y guía', bajada: 'Los términos científicos explicados con palabras sencillas y ejemplos' },
 ];
 const INICIO = { cliente: 'finca', operativo: 'revision', monitoreo: 'monitoreo', administrador: 'admin' };
 
 function modulosDe(usuario) {
-  const lista = MODULOS.filter((m) => m.permisos.some((p) => puede(usuario, p)));
+  const lista = MODULOS.filter((m) => !m.permisos.length || m.permisos.some((p) => puede(usuario, p)));
   const inicio = lista.find((m) => m.clave === INICIO[usuario.rol]);
   return inicio ? [inicio, ...lista.filter((m) => m !== inicio)] : lista;
 }
@@ -29,6 +31,7 @@ export default function App() {
   const [usuario, setUsuario] = useState(null);
   const [listo, setListo] = useState(!hayToken());
   const [activo, setActivo] = useState(null);
+  const [pedidoGlosario, setPedidoGlosario] = useState(null); // { id, n }: término que otra vista pidió abrir
 
   useEffect(() => {
     if (!hayToken()) return;
@@ -45,6 +48,16 @@ export default function App() {
     document.addEventListener('visibilitychange', refrescar);
     return () => document.removeEventListener('visibilitychange', refrescar);
   }, [usuario?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // "Ver en el glosario completo" desde un cuadro emergente lleva a la vista Glosario en ese término.
+  useEffect(() => {
+    const ir = (e) => {
+      setActivo('glosario');
+      setPedidoGlosario((p) => ({ id: e.detail, n: (p?.n || 0) + 1 }));
+    };
+    window.addEventListener('poseidon:glosario', ir);
+    return () => window.removeEventListener('poseidon:glosario', ir);
+  }, []);
 
   function salir() { setToken(null); setUsuario(null); setActivo(null); }
   if (!listo) return <p className="cargando">Cargando…</p>;
@@ -78,7 +91,8 @@ export default function App() {
             <h1>{modulo.titulo}</h1>
             <p>{modulo.bajada}</p>
           </div>
-          <main><modulo.Panel key={modulo.clave} usuario={usuario} /></main>
+          <main><modulo.Panel key={modulo.clave} usuario={usuario}
+            pedido={modulo.clave === 'glosario' ? pedidoGlosario : undefined} /></main>
         </>
       ) : (
         <main><p className="vacio">Su rol no tiene vistas asignadas. Pida al administrador que le otorgue permisos.</p></main>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, CircleMarker, Tooltip, useMapEvents } from 'react-leaflet';
 import { api } from './api.js';
+import { Termino } from './Termino.jsx';
 
 const CRITERIOS = { agua: 'Agua', clima: 'Heladas', suelo: 'Suelo', ingreso: 'Ingreso', forraje: 'Forraje' };
 export const COCHABAMBA = [-17.3895, -66.1568];
@@ -120,18 +121,26 @@ export function Detalle({ id, children }) {
 export function Clima({ meses, fuente }) {
   return (
     <div className="caja">
-      <h2>Clima típico del lugar <small>{fuente === 'nasa-power' ? 'NASA POWER' : 'demostración'}</small></h2>
+      <h2>
+        <Termino id="climatologia">Clima típico del lugar</Termino>{' '}
+        <small>{fuente === 'nasa-power' ? <Termino id="nasa-power">NASA POWER</Termino> : 'demostración'}</small>
+      </h2>
+      <p className="suave">Toque los nombres con línea punteada para ver qué significan.</p>
       <div className="tabla-scroll">
         <table>
           <thead><tr><th></th>{meses.map((m) => <th key={m.mes}>{m.mes}</th>)}</tr></thead>
           <tbody>
-            <tr><th>Lluvia (mm)</th>{meses.map((m) => <td key={m.mes} className={m.seco ? 'seco' : ''}>{Math.round(m.lluvia_mm)}</td>)}</tr>
-            <tr><th>Evapotranspiración (mm)</th>{meses.map((m) => <td key={m.mes}>{Math.round(m.et0_mm)}</td>)}</tr>
-            <tr><th>Mínima (°C)</th>{meses.map((m) => <td key={m.mes} className={`helada-${m.helada}`}>{m.tmin}</td>)}</tr>
+            <tr><th><Termino id="lluvia">Lluvia</Termino> (mm)</th>{meses.map((m) => <td key={m.mes} className={m.seco ? 'seco' : ''}>{Math.round(m.lluvia_mm)}</td>)}</tr>
+            <tr><th><Termino id="evapotranspiracion">Evapotranspiración</Termino> (mm)</th>{meses.map((m) => <td key={m.mes}>{Math.round(m.et0_mm)}</td>)}</tr>
+            <tr><th><Termino id="temperatura-minima">Mínima</Termino> (°C)</th>{meses.map((m) => <td key={m.mes} className={`helada-${m.helada}`}>{m.tmin}</td>)}</tr>
           </tbody>
         </table>
       </div>
-      <p className="leyenda"><i className="seco" /> mes seco <i className="helada-media" /> helada posible <i className="helada-alta" /> helada probable</p>
+      <p className="leyenda">
+        <i className="seco" /> <Termino id="mes-seco">mes seco</Termino>
+        <i className="helada-media" /> helada posible <i className="helada-alta" /> helada probable
+        {' '}<Termino id="temperatura-minima" soloIcono />
+      </p>
     </div>
   );
 }
@@ -141,7 +150,7 @@ export function Estrategia({ e }) {
     <article className={`tarjeta ${e.tipo}`}>
       <div className="tarjeta-cabeza">
         <h3>{e.titulo}</h3>
-        <div className="puntaje"><b>{e.puntaje}</b><span>/100</span></div>
+        <div className="puntaje"><b>{e.puntaje}</b><span>/100</span> <Termino id="puntaje" soloIcono /></div>
       </div>
       <p className="secuencia">{e.nombres.join(' → ')}</p>
       <ul className="barras">
@@ -153,8 +162,8 @@ export function Estrategia({ e }) {
       <ul>{e.porque.map((t) => <li key={t}>{t}</li>)}</ul>
       <h4>Evidencia</h4>
       <ul>
-        <li>Riego necesario: <b>{e.evidencia.deficit_agua_mm} mm</b> por campaña (demanda {e.evidencia.demanda_agua_mm} mm)</li>
-        <li>Suelo desnudo: <b>{e.evidencia.meses_suelo_desnudo} meses</b> al año</li>
+        <li><Termino id="riego">Riego necesario</Termino>: <b>{e.evidencia.deficit_agua_mm} mm</b> por campaña (demanda {e.evidencia.demanda_agua_mm} mm)</li>
+        <li><Termino id="suelo-desnudo">Suelo desnudo</Termino>: <b>{e.evidencia.meses_suelo_desnudo} meses</b> al año</li>
         {e.detalle.map((d) => (
           <li key={d.codigo}>{d.nombre}: {d.siembra}–{d.cosecha}, riego {d.deficit_mm} mm
             {d.meses_helada.length > 0 && `, helada en ${d.meses_helada.join(', ')}`}</li>

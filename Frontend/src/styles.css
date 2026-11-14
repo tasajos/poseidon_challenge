@@ -253,3 +253,79 @@ summary { cursor: pointer; color: var(--suave); font-weight: 600; }
   .apilable select { min-width: 0; width: auto; min-height: 44px; }
   .apilable .secundario.chico { min-height: 44px; }
 }
+
+/* ---------- Glosario: términos tocables y cuadro emergente ---------- */
+.termino { display: inline-flex; align-items: baseline; gap: 4px; background: none; border: 0; padding: 0; margin: 0; font: inherit; color: inherit; text-align: inherit; cursor: help; }
+.termino-texto { text-decoration: underline dotted var(--azul); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.termino:hover .termino-texto, .termino[aria-expanded=true] .termino-texto { color: var(--azul); text-decoration-style: solid; }
+.termino-i { display: inline-grid; place-items: center; width: 17px; height: 17px; border-radius: 50%; background: var(--azul-claro); color: var(--azul); border: 1.5px solid var(--azul); font: 800 11px/1 Nunito, system-ui, sans-serif; flex: none; align-self: center; }
+.termino:hover .termino-i, .termino[aria-expanded=true] .termino-i { background: var(--azul); color: #fff; }
+.termino.solo-icono { vertical-align: middle; padding: 6px; margin: -6px -2px; } /* área táctil mayor sin mover el texto */
+.termino.solo-icono .termino-i { width: 20px; height: 20px; font-size: 12px; }
+th .termino, .leyenda .termino { white-space: nowrap; }
+
+.termino-cuadro { position: fixed; z-index: 1000; overflow-y: auto; overscroll-behavior: contain; background: var(--papel); color: var(--tinta);
+  border: 1px solid var(--linea); border-top: 6px solid var(--amarillo); border-radius: var(--radio); box-shadow: 0 12px 36px rgba(31, 42, 68, .22);
+  padding: 16px 16px 14px; font-size: 15px; line-height: 1.5; text-align: left; white-space: normal; font-weight: 400; }
+.termino-cuadro:focus { outline: none; }
+.termino-cuadro.hoja { left: 0; right: 0; bottom: 0; max-height: 85vh; border-radius: 18px 18px 0 0; padding-bottom: calc(16px + env(safe-area-inset-bottom)); animation: subir .18s ease-out; }
+@keyframes subir { from { transform: translateY(30px); opacity: .4; } }
+.termino-fondo { position: fixed; inset: 0; z-index: 999; background: rgba(31, 42, 68, .45); }
+.termino-cerrar { position: absolute; top: 8px; right: 8px; width: 40px; height: 40px; border: 0; border-radius: 50%; background: none; font-size: 26px; line-height: 1; color: var(--suave); }
+.termino-cerrar:hover { background: var(--fondo); color: var(--tinta); }
+.termino-cuadro .secundario.ancho { margin-top: 14px; }
+
+.ficha-termino { font-size: 15px; }
+.ficha-termino-cabeza { display: flex; gap: 12px; align-items: flex-start; padding-right: 32px; }
+.ficha-termino-cabeza h3 { font-size: 19px; }
+.ficha-termino-cabeza h3 small { font-size: 14px; color: var(--suave); font-weight: 700; }
+.ficha-termino-corto { font-weight: 700; color: var(--azul-osc); margin-top: 2px; }
+.ficha-termino h4 { font-size: 12px; text-transform: uppercase; letter-spacing: .6px; color: var(--vino); margin: 14px 0 3px; }
+.ficha-termino-ejemplo { background: var(--amarillo-claro); border-left: 6px solid var(--amarillo); border-radius: 10px; padding: 2px 12px 10px; margin-top: 14px; }
+.ficha-termino-ejemplo h4 { margin-top: 10px; color: var(--tinta); }
+.ficha-termino-nota { background: var(--vino-claro); color: var(--vino); border-radius: 10px; padding: 6px 10px; margin-top: 10px; font-size: 13px; font-weight: 700; }
+.ficha-termino-fuente { color: var(--suave); font-size: 12px; margin-top: 10px; }
+.icono-termino { width: 40px; height: 40px; flex: none; background: var(--fondo); border-radius: 12px; padding: 4px; }
+
+/* Apoyos visuales: balanza (barras comparadas) y escala (degradado con marcas numeradas) */
+.visual { margin: 14px 0 0; background: var(--fondo); border: 1px solid var(--linea); border-radius: 12px; padding: 10px 12px; }
+.visual figcaption { font-size: 12px; font-weight: 700; color: var(--suave); margin-bottom: 6px; }
+.balanza { display: grid; gap: 6px; }
+.balanza li { display: grid; grid-template-columns: minmax(0, 120px) 1fr auto; gap: 8px; align-items: center; font-size: 13px; }
+.balanza b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pista { height: 14px; background: var(--linea); border-radius: 7px; overflow: hidden; }
+.relleno { height: 100%; border-radius: 7px; }
+.c-azul { background: var(--azul); } .c-naranja { background: var(--naranja); } .c-amarillo { background: var(--amarillo); } .c-vino { background: var(--vino); }
+.visual-conclusion { font-weight: 800; font-size: 14px; margin-top: 8px; color: var(--azul-osc); }
+.escala { position: relative; height: 18px; border-radius: 9px; margin: 14px 4px 0; border: 1px solid rgba(31, 42, 68, .15); }
+.pin { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--tinta); color: #fff; font-size: 12px; font-weight: 800; border: 2px solid #fff; flex: none; }
+.escala .pin { position: absolute; top: 50%; transform: translate(-50%, -50%); box-shadow: 0 1px 4px rgba(0, 0, 0, .3); }
+.escala-extremos { display: flex; justify-content: space-between; font-size: 12px; color: var(--suave); margin: 4px 0 6px; }
+.escala-marcas { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; font-size: 13px; }
+.escala-marcas li { display: flex; align-items: center; gap: 8px; }
+.escala-marcas b { font-variant-numeric: tabular-nums; }
+
+/* Vista Glosario */
+.guia { border-top: 6px solid var(--amarillo); }
+.guia .termino-i { display: inline-grid; vertical-align: middle; }
+.pasos-guia { margin: 12px 0 0; padding-left: 22px; display: grid; gap: 12px; font-size: 15px; }
+.pasos-guia li::marker { font-weight: 800; color: var(--naranja); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.chips button { border: 1.5px solid var(--linea); background: #fff; border-radius: 99px; padding: 6px 14px; min-height: 40px; font-weight: 700; font-size: 14px; color: var(--suave); }
+.chips button.activa { background: var(--azul); border-color: var(--azul); color: #fff; }
+.glosario { display: grid; gap: 10px; }
+.termino-tarjeta { background: var(--papel); border: 1.5px solid var(--linea); border-radius: var(--radio); box-shadow: var(--sombra); scroll-margin-top: 16px; }
+.termino-tarjeta.abierta { border-color: var(--azul); }
+.termino-tarjeta > div { padding: 0 16px 16px; }
+.termino-tarjeta-cabeza { width: 100%; display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; text-align: left; background: none; border: 0; padding: 14px 16px; border-radius: var(--radio); }
+.termino-tarjeta-cabeza > span:nth-child(2) { display: grid; gap: 2px; }
+.termino-tarjeta-cabeza b { font-size: 17px; }
+.termino-tarjeta-cabeza small { color: var(--suave); font-size: 14px; }
+.termino-tarjeta-cabeza .etiqueta { justify-self: start; background: var(--vino-claro); color: var(--vino); }
+.flecha { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; background: var(--azul-claro); color: var(--azul); font-size: 22px; font-weight: 800; }
+@media (max-width: 560px) {
+  .termino-tarjeta-cabeza { padding: 12px; gap: 10px; }
+  .termino-tarjeta > div { padding: 0 12px 14px; }
+  .balanza li { grid-template-columns: 1fr auto; }
+  .balanza li .pista { grid-column: 1 / -1; grid-row: 2; }
+}

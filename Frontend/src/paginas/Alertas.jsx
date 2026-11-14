@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { Interruptor, fechaHora, useDatos } from '../componentes.jsx';
+import { Termino } from '../Termino.jsx';
 
 const CANAL = { web: 'Notificación web', sms: 'SMS' };
 const ESTADO = { enviado: 'enviada', simulado: 'simulada', 'sin-dispositivo': 'sin dispositivo', error: 'falló' };
@@ -75,9 +76,13 @@ function Preferencias({ datos, recargar }) {
     <form className="caja" onSubmit={guardar}>
       <h2>Qué alertas recibir</h2>
       <Interruptor marcado={p.helada} onCambiar={cambiar('helada')}
-        detalle={`Cuando la mínima diaria baja a ${datos.umbrales.heladaC} °C o menos`}>Helada</Interruptor>
+        detalle={`Cuando la mínima diaria baja a ${datos.umbrales.heladaC} °C o menos`}>
+        Helada <Termino id="helada" soloIcono />
+      </Interruptor>
       <Interruptor marcado={p.sequia} onCambiar={cambiar('sequia')}
-        detalle={`Cuando en 30 días llueve menos del ${datos.umbrales.sequiaPct} % de lo normal`}>Sequía severa</Interruptor>
+        detalle={`Cuando en 30 días llueve menos del ${datos.umbrales.sequiaPct} % de lo normal`}>
+        Sequía severa <Termino id="sequia" soloIcono />
+      </Interruptor>
 
       <h2>Cómo recibirlas</h2>
       <Interruptor marcado={p.web} onCambiar={cambiar('web')}
@@ -172,7 +177,7 @@ function Probar({ datos, recargar }) {
         {datos.lugares
           ? `Vigilamos ${datos.lugares} lugar(es) de sus parcelas${datos.revision.cada_horas ? ` cada ${datos.revision.cada_horas} horas` : ''}.`
           : 'Aún no tiene parcelas registradas.'}
-        {' '}Los datos diarios de NASA POWER llegan con 2 a 4 días de retraso y no son un pronóstico: avisan de condiciones ya medidas que suelen repetirse.
+        {' '}Los datos diarios de <Termino id="nasa-power">NASA POWER</Termino> llegan con 2 a 4 días de retraso y no son un pronóstico: avisan de condiciones ya medidas que suelen repetirse.
       </p>
       <button className="principal" disabled={Boolean(estado.cargando)} onClick={() => correr('revisar')}>
         {estado.cargando === 'revisar' ? 'Consultando NASA POWER…' : 'Revisar mis parcelas ahora'}

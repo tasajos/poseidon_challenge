@@ -60,6 +60,18 @@ revisar sus parcelas al momento. Una misma helada (por día) o sequía (por sema
 3. **Heladas** — meses con mínima media baja, cruzados con el calendario y la tolerancia de cada cultivo.
 4. **Rotación** — puntaje de agua, heladas, suelo (leguminosas, alternancia de familias, raíz profunda, cobertura), ingreso y forraje, ponderado por las prioridades.
 
+## Glosario y guía
+
+Los indicadores de la interfaz (lluvia, evapotranspiración, mínima, mes seco, riego necesario, suelo desnudo,
+puntaje, alertas de helada y sequía, NASA POWER) se muestran con línea punteada y un **?**. Al tocarlos se abre un
+cuadro con la explicación en lenguaje cotidiano, un apoyo visual (escala o barras comparadas), un ejemplo práctico,
+cómo lo usa Poseidon y la fuente del dato. En el teléfono el cuadro aparece como hoja inferior.
+
+La vista *Glosario* (visible para todos los roles, sin permiso) reúne todos los términos con buscador, filtro por
+tema y una guía rápida para leer la comparación. Incluye NDVI y humedad del suelo (SMAP) marcados como
+“aún no se usa”, porque son índices satelitales comunes que Poseidon todavía no calcula.
+Los textos están en `Frontend/src/glosario.js`.
+
 ## Estructura
 
 | Carpeta | Contenido |
