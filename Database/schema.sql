@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
   nombre VARCHAR(80) NOT NULL,
   email VARCHAR(120) NOT NULL UNIQUE,
   password_hash VARCHAR(200) NOT NULL,     -- scrypt, formato "sal:hash" en hexadecimal
-  rol ENUM('administrador','operativo','cliente','monitoreo') NOT NULL DEFAULT 'cliente',
+  rol ENUM('administrador','operativo','cliente','monitoreo','comprador') NOT NULL DEFAULT 'cliente',  -- cliente = agricultor; comprador = cooperativa o mercado
   activo BOOLEAN NOT NULL DEFAULT TRUE,
   creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -62,8 +62,8 @@ CREATE TABLE IF NOT EXISTS evaluaciones (
 -- El administrador edita esta matriz desde su panel. npm run seed carga los valores por defecto
 -- (Backend/src/permisos.js) solo si la tabla está vacía. El backend crea estas tablas al arrancar si faltan.
 CREATE TABLE IF NOT EXISTS rol_permisos (
-  rol ENUM('administrador','operativo','cliente','monitoreo') NOT NULL,
-  permiso VARCHAR(30) NOT NULL,            -- evaluar, ver_todas, revisar, reportes, alertas, usuarios, respaldos
+  rol ENUM('administrador','operativo','cliente','monitoreo','comprador') NOT NULL,
+  permiso VARCHAR(30) NOT NULL,            -- evaluar, ver_todas, revisar, reportes, alertas, usuarios, respaldos, ofertar, comprar, incidencias
   PRIMARY KEY (rol, permiso)
 );
 
@@ -103,4 +103,79 @@ CREATE TABLE IF NOT EXISTS alertas_enviadas (
   creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY una_vez (usuario_id, clave),
   FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+);
+
+-- Permisos cuyos valores por defecto ya se cargaron: un permiso nuevo se siembra una sola vez
+CREATE TABLE IF NOT EXISTS permisos_sembrados (
+  permiso VARCHAR(30) PRIMARY KEY
+);
+
+-- ---------- Oferta sostenible y solicitudes de compra (HU-CLI-02, HU-CLI-03) ----------
+-- El agricultor publica un cultivo de una parcela evaluada. Las prácticas de rotación y el índice de
+-- agua se calculan con esa evaluación; no los declara el productor.
+CREATE TABLE IF NOT EXISTS ofertas (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  usuario_id INT NOT NULL,                 -- productor
+  evaluacion_id INT NOT NULL,              -- rotación de la que sale la cosecha
+  cultivo VARCHAR(30) NOT NULL,            -- código del catálogo, parte de la rotación
+  cantidad DECIMAL(10,2) NOT NULL,
+  unidad ENUM('kg','qq','t') NOT NULL,
+  disponible_desde CHAR(7) NOT NULL,       -- AAAA-MM
+  nota VARCHAR(300) NULL,
+  activa BOOLEAN NOT NULL DEFAULT TRUE,
+  creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+  FOREIGN KEY (evaluacion_id) REFERENCES evaluaciones(id) ON DELETE CASCADE
+);
+
+-- Contacto mediado: los correos (y el teléfono, si el productor quiere) solo se comparten al aceptar
+CREATE TABLE IF NOT EXISTS solicitudes (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  oferta_id INT NOT NULL,
+  comprador_id INT NOT NULL,
+  productor_id INT NOT NULL,
+  tipo ENUM('compra','contacto') NOT NULL,
+  cantidad DECIMAL(10,2) NULL,
+  mensaje VARCHAR(1000) NOT NULL,
+  estado ENUM('pendiente','aceptada','rechazada','retirada') NOT NULL DEFAULT 'pendiente',
+  respuesta VARCHAR(1000) NULL,
+  telefono_productor VARCHAR(20) NULL,
+  respondido_en TIMESTAMP NULL,
+  creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (oferta_id) REFERENCES ofertas(id) ON DELETE CASCADE,
+  FOREIGN KEY (comprador_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+  FOREIGN KEY (productor_id) REFERENCES usuarios(id) ON DELETE CASCADE
+);
+
+-- ---------- Incidencias de plagas y enfermedades en campo (HU-OPT-02) ----------
+CREATE TABLE IF NOT EXISTS incidencias (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  tecnico_id INT NOT NULL,
+  tipo ENUM('plaga','enfermedad','deficiencia') NOT NULL,
+  agente VARCHAR(80) NOT NULL,             -- p. ej. "gorgojo de los Andes", "tizón tardío"
+  cultivo VARCHAR(30) NULL,                -- cultivo afectado (su familia orienta la rotación)
+  severidad ENUM('baja','media','alta') NOT NULL,
+  lat DECIMAL(9,6) NOT NULL,               -- coordenadas del GPS del teléfono
+  lon DECIMAL(9,6) NOT NULL,
+  precision_m SMALLINT NULL,               -- precisión informada por el GPS
+  nota VARCHAR(500) NULL,
+  estado ENUM('activa','controlada') NOT NULL DEFAULT 'activa',
+  creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (tecnico_id) REFERENCES usuarios(id) ON DELETE CASCADE
+);
+
+-- Fotos: el archivo está en la unidad compartida de Google Drive (archivo = id de Drive)
+-- o, sin Drive configurado, en Backend/fotos/ (archivo = nombre local)
+CREATE TABLE IF NOT EXISTS incidencia_fotos (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  incidencia_id INT NOT NULL,
+  almacen ENUM('drive','local') NOT NULL,
+  archivo VARCHAR(200) NOT NULL,
+  enlace VARCHAR(300) NULL,                -- webViewLink de Drive
+  mime VARCHAR(40) NOT NULL,
+  bytes INT NOT NULL,
+  subido_por INT NULL,
+  creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (incidencia_id) REFERENCES incidencias(id) ON DELETE CASCADE,
+  FOREIGN KEY (subido_por) REFERENCES usuarios(id) ON DELETE SET NULL
 );

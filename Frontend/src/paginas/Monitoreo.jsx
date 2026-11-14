@@ -19,11 +19,19 @@ export default function Monitoreo() {
 
       <div className="dos-columnas ancha">
         <div className="caja">
-          <h2>Mapa de parcelas</h2>
-          <Mapa alto={340} puntos={d.evaluaciones.map((e) => ({
-            id: e.id, lat: e.lat, lon: e.lon, alerta: conAlerta.has(e.id), texto: `${e.parcela} · ${e.cliente}`,
-          }))} />
-          <p className="leyenda"><i className="marca-azul" /> sin alertas <i className="marca-vino" /> con alertas</p>
+          <h2>Mapa de parcelas e incidencias</h2>
+          <Mapa alto={340} puntos={[
+            ...d.evaluaciones.map((e) => ({
+              id: e.id, lat: e.lat, lon: e.lon, alerta: conAlerta.has(e.id), texto: `${e.parcela} · ${e.cliente}`,
+            })),
+            ...d.incidencias.map((i) => ({
+              id: `i${i.id}`, lat: i.lat, lon: i.lon, color: '#F28C28', radio: 6, texto: `${i.agente} (${i.tipo}, severidad ${i.severidad})`,
+            })),
+          ]} />
+          <p className="leyenda">
+            <i className="marca-azul" /> sin alertas <i className="marca-vino" /> con alertas
+            <i className="marca-naranja" /> plaga o enfermedad activa ({d.totales.incidencias})
+          </p>
         </div>
         <div className="caja">
           <h2>Alertas</h2>

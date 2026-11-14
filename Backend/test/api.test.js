@@ -88,7 +88,7 @@ test('un cliente no ve evaluaciones de otro', async () => {
 
 test('RBAC: el ingreso trae los permisos y el administrador los cambia con efecto inmediato', async () => {
   const login = await pedir('/auth/login', { method: 'POST', body: { email: 'cliente@poseidon.test', password: CLAVE } });
-  assert.deepEqual(login.datos.usuario.permisos, ['alertas', 'evaluar']);
+  assert.deepEqual(login.datos.usuario.permisos, ['alertas', 'evaluar', 'ofertar']);
 
   const admin = await ingresar('admin'), monitoreo = await ingresar('monitoreo'), cliente = await ingresar('cliente');
   assert.equal((await pedir('/permisos', { token: cliente })).status, 403);

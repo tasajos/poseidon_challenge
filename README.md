@@ -19,8 +19,15 @@ comprueba el permiso en cada petición, así que un cambio rige de inmediato, in
 | `revisar` | Revisión técnica: nota para el agricultor | operativo, administrador |
 | `reportes` | Monitoreo: tablero y reporte regional | operativo, monitoreo, administrador |
 | `alertas` | Alertas climáticas en el teléfono | cliente, operativo, monitoreo |
+| `ofertar` | Mis ventas: publicar cosecha y responder a compradores | cliente |
+| `comprar` | Oferta sostenible: filtrar la oferta y enviar solicitudes | comprador |
+| `incidencias` | Plagas en campo: marcar incidencias con GPS y fotos | operativo |
 | `usuarios` | Usuarios, roles y permisos (fijo para el administrador) | administrador |
 | `respaldos` | Crear y restaurar respaldos | administrador |
+
+Roles: `cliente` es el **agricultor**; `comprador` es la **cooperativa o mercado local**. Un permiso nuevo llega a
+una base existente con sus valores por defecto una sola vez (tabla `permisos_sembrados`), sin pisar los cambios del
+administrador en los demás.
 
 La interfaz es responsive (escritorio y teléfono). Paleta: azul, naranja, amarillo y vino; tipografía Nunito.
 
@@ -59,6 +66,49 @@ revisar sus parcelas al momento. Una misma helada (por día) o sequía (por sema
 2. **Balance hídrico** — evapotranspiración de referencia (Hargreaves) y demanda de cada cultivo (Kc); la diferencia con la lluvia es el riego necesario.
 3. **Heladas** — meses con mínima media baja, cruzados con el calendario y la tolerancia de cada cultivo.
 4. **Rotación** — puntaje de agua, heladas, suelo (leguminosas, alternancia de familias, raíz profunda, cobertura), ingreso y forraje, ponderado por las prioridades.
+
+## Oferta sostenible y solicitudes de compra
+
+El agricultor publica en *Mis ventas* un cultivo de una parcela que ya evaluó (cantidad, unidad, mes de
+disponibilidad). La cooperativa o mercado ve esa oferta en *Oferta sostenible* y la filtra por:
+
+- **Cultivo**.
+- **Prácticas de rotación aplicadas**: leguminosa en la rotación, alternancia de familias, suelo cubierto
+  (6 meses o menos desnudo) y raíz profunda. Se **calculan** con la rotación registrada, no las declara el productor.
+- **Verificada**: un técnico revisó la evaluación de esa parcela. No es una certificación oficial.
+- **Uso eficiente del agua**: el puntaje de agua de la rotación (0-100; alto ≥ 70, medio 40-69), con el riego
+  estimado del cultivo y el % que cubre la lluvia. La lista se ordena por este indicador.
+- **Zona**: municipio más cercano a la parcela (aproximado, `Backend/src/geo.js`).
+
+El comprador no ve la parcela exacta (el mapa la aproxima a ~2 km), ni el correo ni el apellido del productor.
+Desde una oferta envía una **solicitud** (intención de compra con cantidad, o solo contacto) con un mensaje;
+el productor recibe un aviso web y la acepta o rechaza. **Solo al aceptar** cada uno ve el correo del otro, y el
+teléfono del productor si decide compartirlo. Límites: 20 solicitudes por día y una pendiente por oferta.
+
+## Plagas y enfermedades en campo
+
+El técnico abre *Plagas en campo* en el teléfono, toma la ubicación con el GPS (o la corrige tocando el mapa, con
+capa satelital), indica plaga, enfermedad o deficiencia, cultivo afectado, severidad, una nota y hasta 5 fotos.
+Las fotos se reducen en el teléfono (1600 px, JPEG) antes de subir y pierden los metadatos EXIF.
+
+Las incidencias **activas** de plagas y enfermedades a menos de 5 km, del último año, castigan las rotaciones que
+siembran la familia atacada (más si la repiten dos campañas seguidas). La explicación de cada estrategia lo dice.
+Al marcarla como *controlada* deja de contar. Monitoreo las ve en su mapa.
+
+### Fotos en Google Drive (unidad compartida)
+
+1. En Google Cloud, cree una **cuenta de servicio**, habilite la **API de Google Drive** y descargue su clave JSON.
+2. Guárdela fuera de git, por ejemplo `Backend/credenciales/drive.json` (la carpeta está en `.gitignore`).
+3. En Google Drive, abra la **unidad compartida** → *Administrar miembros* → agregue el `client_email` de la cuenta
+   de servicio como **Gestor de contenido**.
+4. En `Backend/.env`: `GOOGLE_DRIVE_CREDENTIALS=./credenciales/drive.json` y `GOOGLE_DRIVE_FOLDER_ID=<id>` (el id de
+   la unidad compartida o de una carpeta dentro de ella, tomado de la URL).
+
+Tiene que ser una unidad compartida: las cuentas de servicio no tienen cuota en "Mi unidad". Cada foto se nombra
+`incidencia-<id>-<fecha>-<n>.jpg` y su descripción lleva tipo, agente, coordenadas y técnico. La aplicación las
+muestra a través del backend, así que no hace falta compartirlas con cada usuario. *Administración → Sistema*
+comprueba la conexión. Sin estas variables las fotos se guardan en `Backend/fotos/` (solo para pruebas) y la
+interfaz lo avisa.
 
 ## Glosario y guía
 
@@ -128,9 +178,24 @@ Todas las rutas, salvo el ingreso, requieren `Authorization: Bearer <token>`.
 | PUT | `/api/alertas/preferencias` | alertas | Tipos (helada, sequía) y canales (web, SMS) |
 | POST, DELETE | `/api/alertas/suscripcion` | alertas | Registra o quita este navegador |
 | POST | `/api/alertas/prueba`, `/api/alertas/revisar` | alertas | Alerta de prueba; revisión inmediata |
+| GET | `/api/mis-ofertas` | ofertar | Ofertas propias y parcelas desde las que puede ofertar |
+| POST, PATCH | `/api/ofertas`, `/api/ofertas/:id` | ofertar | Publica una oferta; la pausa o reactiva (`{ "activa": false }`) |
+| GET | `/api/ofertas?cultivos=&practicas=&verificada=1&agua=media&zona=` | comprar | Oferta pública filtrada |
+| POST | `/api/solicitudes` | comprar | Solicitud de compra o contacto |
+| GET | `/api/solicitudes/enviadas`, `/api/solicitudes/recibidas` | comprar / ofertar | Historial con estado |
+| PATCH | `/api/solicitudes/:id/respuesta` | ofertar | Acepta o rechaza (`{ estado, respuesta?, telefono? }`) |
+| POST | `/api/solicitudes/:id/retirar` | comprar | Retira una solicitud pendiente |
+| GET | `/api/incidencias` | incidencias o reportes | Incidencias con sus fotos y estado del almacén |
+| POST, PATCH | `/api/incidencias`, `/api/incidencias/:id` | incidencias | Registra; marca activa o controlada |
+| POST | `/api/incidencias/:id/fotos` | incidencias | Una foto por petición, cuerpo binario JPEG/PNG/WebP (≤ 8 MB) |
+| GET | `/api/incidencias/:id/fotos/:foto` | incidencias o reportes | Devuelve la foto (desde Drive o local) |
 
 ## Límites conocidos
 
 - Los valores del catálogo (Kc, ciclos, meses de siembra, valor de mercado) son referencias aproximadas y deben validarse con un agrónomo local.
 - No usa datos de suelo de la parcela ni imágenes satelitales (NDVI, SMAP); son los siguientes pasos naturales.
+- El indicador de agua de la oferta es una estimación con el clima típico; no mide el riego realmente aplicado.
+- La zona de una oferta es el municipio cuyo centro está más cerca, no el límite municipal oficial.
+- Las incidencias de campo no avisan todavía a los agricultores cercanos; influyen en sus próximas evaluaciones.
+- El GPS del navegador, como las notificaciones, necesita https o `localhost`.
 - La herramienta apoya la decisión; no reemplaza el criterio del agricultor ni de un técnico local.

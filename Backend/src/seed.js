@@ -1,9 +1,10 @@
 // Carga en MySQL el catálogo de cultivos y los usuarios de demostración (inserta o actualiza).
 import 'dotenv/config';
-import { getPool, cultivosDeArchivo, usuariosDemo, sembrarPermisos } from './db.js';
+import { getPool, migrar, cultivosDeArchivo, usuariosDemo, sembrarPermisos } from './db.js';
 import { hashPassword } from './auth.js';
 
 const db = getPool();
+await migrar(db); // una base creada con un schema.sql anterior recibe las tablas y el rol nuevos
 const cultivos = await cultivosDeArchivo();
 for (const c of cultivos) {
   await db.query(
@@ -34,6 +35,8 @@ if (!clave || clave === 'cambie-esta-clave') {
   }
   console.log(`Usuarios de demostración: ${usuarios.map((u) => u.email).join(', ')}`);
 }
-if (await sembrarPermisos(db)) console.log('Permisos por rol cargados con los valores por defecto');
-else console.log('Permisos por rol: ya configurados, no se modifican');
+const sembrados = await sembrarPermisos(db);
+console.log(sembrados.length
+  ? `Permisos por defecto cargados para: ${sembrados.join(', ')}`
+  : 'Permisos por rol: ya configurados, no se modifican');
 await db.end();

@@ -41,7 +41,28 @@ export function evaluarCultivo(c, clima) {
 const media = (xs) => xs.reduce((a, b) => a + b, 0) / xs.length;
 const limitar = (x) => Math.max(0, Math.min(100, Math.round(x)));
 
-export function evaluarRotacion(cultivos, clima, prioridades = {}) {
+// Castigo por plagas y enfermedades reportadas cerca (HU-OPT-02). plagas: [{ familia, presion 0-1, agentes, reportes, distancia_km }]
+// (ver plagas.js). Sembrar la familia atacada alimenta el ciclo de la plaga; sembrarla dos campañas seguidas, más.
+// El castigo baja el puntaje de suelo y también el total, para que cuente aunque el suelo no sea una prioridad.
+const CASTIGO_SEGUIDAS = 20, CASTIGO_PRESENTE = 10, CASTIGO_MAX = 25;
+
+function sanidad(cultivos, plagas) {
+  const n = cultivos.length;
+  let castigo = 0;
+  const afectadas = [];
+  for (const p of plagas) {
+    if (!cultivos.some((c) => c.familia === p.familia)) continue;
+    const seguidas = cultivos.some((c, i) => c.familia === p.familia && cultivos[(i + 1) % n].familia === p.familia);
+    castigo += p.presion * (seguidas ? CASTIGO_SEGUIDAS : CASTIGO_PRESENTE);
+    afectadas.push({
+      familia: p.familia, seguidas, agentes: p.agentes, reportes: p.reportes, distancia_km: p.distancia_km,
+      cultivos: cultivos.filter((c) => c.familia === p.familia).map((c) => c.nombre),
+    });
+  }
+  return { castigo: Math.min(CASTIGO_MAX, castigo), afectadas };
+}
+
+export function evaluarRotacion(cultivos, clima, prioridades = {}, plagas = []) {
   const n = cultivos.length;
   const detalle = cultivos.map((c) => evaluarCultivo(c, clima));
   const deficit = media(detalle.map((d) => d.deficit_mm));
@@ -53,19 +74,21 @@ export function evaluarRotacion(cultivos, clima, prioridades = {}) {
   const fraccion = (campo) => cultivos.filter((c) => c[campo]).length / n;
   const diversidad = (familias.length / n) * (repite ? 0.5 : 1);
 
+  const plaga = sanidad(cultivos, plagas);
   const puntajes = {
     agua: limitar(100 * (1 - deficit / 800)),
     clima: limitar(100 * (1 - helada / 3)),
     suelo: limitar(100 * (0.35 * fraccion('fija_nitrogeno') + 0.35 * diversidad
-      + 0.15 * fraccion('raiz_profunda') + 0.15 * (1 - desnudos / 12))),
+      + 0.15 * fraccion('raiz_profunda') + 0.15 * (1 - desnudos / 12)) - 2 * plaga.castigo),
     ingreso: limitar((100 * (media(cultivos.map((c) => c.valor_mercado)) - 1)) / 2),
     forraje: limitar(100 * fraccion('forraje')),
   };
   const pesos = CRITERIOS.map((k) => Math.max(0, Number(prioridades[k]) || 0));
   const suma = pesos.reduce((a, b) => a + b, 0);
-  const total = suma === 0
+  const ponderado = suma === 0
     ? media(CRITERIOS.map((k) => puntajes[k]))
     : CRITERIOS.reduce((acc, k, i) => acc + puntajes[k] * pesos[i], 0) / suma;
+  const total = Math.max(0, ponderado - plaga.castigo);
 
   return {
     cultivos: cultivos.map((c) => c.codigo),
@@ -77,9 +100,10 @@ export function evaluarRotacion(cultivos, clima, prioridades = {}) {
       demanda_agua_mm: Math.round(media(detalle.map((d) => d.demanda_mm))),
       meses_suelo_desnudo: Math.round(desnudos * 10) / 10,
       familias, repite_familia: repite,
+      plagas: plaga.afectadas,
     },
     detalle,
-    _crudo: { deficit, helada, desnudos },
+    _crudo: { deficit, helada, desnudos, plagas: plaga.castigo },
   };
 }
 
@@ -121,6 +145,14 @@ function explicar(alt, actual, cultivos, cultivosActuales) {
   if (alt.puntajes.forraje > actual.puntajes.forraje) porque.push('Añade forraje para el ganado.');
   if (alt.puntajes.ingreso > actual.puntajes.ingreso) porque.push('Mayor valor de mercado referencial.');
   if (actual._crudo.desnudos - alt._crudo.desnudos >= 1) porque.push('El suelo queda menos meses desnudo.');
+  if (actual._crudo.plagas - alt._crudo.plagas >= 2) {
+    const evitadas = actual.evidencia.plagas
+      .filter((p) => !alt.evidencia.plagas.some((q) => q.familia === p.familia && (q.seguidas || !p.seguidas)));
+    const texto = evitadas.length
+      ? evitadas.map((p) => `${p.familia} (${p.agentes.join(', ')})`).join(' y ')
+      : 'la exposición a las familias atacadas';
+    porque.push(`Corta el ciclo de plagas reportadas por técnicos cerca de su parcela: evita ${texto}.`);
+  }
   if (!porque.length) porque.push('Puntaje parecido al de la rotación actual según sus prioridades.');
   return { porque, riesgos };
 }
@@ -136,6 +168,12 @@ function riesgosPropios(ev, cultivos) {
     if (c.ciclo_dias >= 365) r.push(`${c.nombre} es perenne: ocupa la parcela más de una campaña.`);
   });
   if (ev.evidencia.deficit_agua_mm > 400) r.push('Déficit de agua alto: depende de que haya riego disponible.');
+  for (const p of ev.evidencia.plagas) {
+    const donde = `${p.reportes} reporte(s) activo(s) de ${p.agentes.join(', ')} a ${p.distancia_km} km`;
+    r.push(p.seguidas
+      ? `${donde}: ataca a las ${p.familia} y esta rotación las siembra dos campañas seguidas (${p.cultivos.join(', ')}), lo que alimenta la plaga.`
+      : `${donde}: ataca a las ${p.familia} (${p.cultivos.join(', ')}); vigile la parcela y no repita esa familia.`);
+  }
   r.push('Validar con un técnico agrícola local antes de cambiar la rotación.');
   return r;
 }
@@ -143,21 +181,21 @@ function riesgosPropios(ev, cultivos) {
 const limpiar = ({ _crudo, ...resto }) => resto;
 
 // Devuelve 3 estrategias: la actual, un ajuste (cambia un cultivo) y un cambio mayor.
-export function compararRotaciones(codigosActuales, catalogo, clima, prioridades = {}) {
+export function compararRotaciones(codigosActuales, catalogo, clima, prioridades = {}, plagas = []) {
   const porCodigo = new Map(catalogo.map((c) => [c.codigo, c]));
   const actuales = codigosActuales.map((k) => {
     if (!porCodigo.has(k)) throw new Error(`Cultivo desconocido: ${k}`);
     return porCodigo.get(k);
   });
   const n = actuales.length;
-  const evActual = evaluarRotacion(actuales, clima, prioridades);
+  const evActual = evaluarRotacion(actuales, clima, prioridades, plagas);
   const claveActual = canonica(codigosActuales);
 
   const opciones = candidatas(catalogo, n)
     .filter((sec) => canonica(sec.map((c) => c.codigo)) !== claveActual)
     .map((sec) => ({
       sec,
-      ev: evaluarRotacion(sec, clima, prioridades),
+      ev: evaluarRotacion(sec, clima, prioridades, plagas),
       comunes: sec.filter((c) => actuales.includes(c)).length,
     }))
     .sort((a, b) => b.ev.puntaje - a.ev.puntaje || a.ev._crudo.deficit - b.ev._crudo.deficit);

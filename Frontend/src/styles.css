@@ -30,7 +30,7 @@ button { cursor: pointer; }
 .quien > div { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .insignia { background: var(--rol); color: var(--tinta); padding: 2px 10px; border-radius: 99px; font-weight: 700; font-size: 12px; text-transform: capitalize; }
 .rol-administrador .insignia { color: #fff; }
-.rol-cliente .insignia { background: var(--amarillo); }
+.rol-cliente .insignia, .rol-comprador .insignia { background: var(--amarillo); }
 .salir { background: none; border: 1.5px solid rgba(255, 255, 255, .6); color: #fff; border-radius: 99px; padding: 6px 16px; min-height: 40px; }
 .salir:hover { background: rgba(255, 255, 255, .15); }
 .titulo-panel { padding: 22px 24px 4px; max-width: 1400px; margin: 0 auto; border-left: 8px solid var(--rol); margin-top: 20px; }
@@ -328,4 +328,109 @@ th .termino, .leyenda .termino { white-space: nowrap; }
   .termino-tarjeta > div { padding: 0 12px 14px; }
   .balanza li { grid-template-columns: 1fr auto; }
   .balanza li .pista { grid-column: 1 / -1; grid-row: 2; }
+}
+
+/* ---------- Comunes de las vistas comerciales y de campo ---------- */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.fila-botones { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+.fila-botones .principal, .fila-botones .secundario { width: auto; flex: 1 1 160px; margin-top: 0; }
+.fila-botones .secundario.chico { flex: 0 0 auto; }
+.fila .campo.crece { flex: 1; }
+.fila .campo { margin-top: 12px; }
+dd.problema { color: var(--vino); font-weight: 700; }
+i.marca-naranja { background: var(--naranja); border-radius: 50%; }
+.evidencia-plaga { color: var(--vino); }
+.chips button small { font-weight: 800; margin-left: 4px; opacity: .7; }
+.chips.grandes button { min-height: 46px; padding: 8px 16px; font-size: 15px; flex: 1 1 auto; }
+.etiqueta-campo { font-size: 14px; font-weight: 600; margin-top: 12px; }
+
+/* Oferta sostenible */
+.filtros h2 { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.filtros h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .5px; color: var(--vino); margin: 18px 0 6px; }
+.filtros .chips { margin-top: 4px; }
+.nota-zona { margin-top: 6px; font-size: 12px; }
+.resultado-filtros { font-weight: 700; color: var(--suave); margin-bottom: 10px; }
+.ofertas { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
+.oferta { background: var(--papel); border: 1px solid var(--linea); border-top: 6px solid var(--azul); border-radius: var(--radio); box-shadow: var(--sombra); padding: 16px; display: flex; flex-direction: column; }
+.oferta-cabeza { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.oferta h3 { font-size: 20px; }
+.oferta h3 span { font-size: 15px; font-weight: 700; color: var(--suave); }
+.oferta h4 { font-size: 12px; text-transform: uppercase; letter-spacing: .6px; color: var(--vino); margin: 12px 0 4px; }
+.oferta > .principal, .oferta > .secundario.ancho { margin-top: 14px; }
+.etiqueta.verificada, .etiqueta.sin-verificar { white-space: nowrap; display: inline-flex; align-items: center; gap: 2px; }
+.etiqueta.verificada { background: var(--azul-claro); color: var(--azul-osc); }
+.etiqueta.sin-verificar { background: var(--fondo); color: var(--suave); border: 1px solid var(--linea); }
+.sello-agua { display: flex; align-items: center; gap: 12px; margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: var(--azul-claro); border-left: 6px solid var(--azul); }
+.sello-agua > b { font-size: 30px; font-weight: 800; line-height: 1; min-width: 46px; text-align: center; color: var(--azul-osc); font-variant-numeric: tabular-nums; }
+.sello-agua > span { display: grid; gap: 2px; }
+.sello-agua strong { font-size: 14px; }
+.sello-agua small { font-size: 12px; color: var(--suave); }
+.sello-agua.nivel-media { background: var(--amarillo-claro); border-left-color: var(--amarillo); }
+.sello-agua.nivel-media > b { color: var(--tinta); }
+.sello-agua.nivel-baja { background: var(--naranja-claro); border-left-color: var(--naranja); }
+.sello-agua.nivel-baja > b { color: var(--vino); }
+.practicas { display: grid; gap: 3px; font-size: 14px; }
+.practicas li { display: flex; gap: 8px; align-items: baseline; }
+.practicas li > span:first-child { width: 18px; text-align: center; font-weight: 800; flex: none; }
+.practicas li.si > span:first-child { color: #2e9e5b; }
+.practicas li.no { color: var(--suave); }
+.oferta-rotacion { font-size: 14px; margin-top: 10px; }
+.oferta-nota { font-size: 14px; font-style: italic; color: var(--suave); margin-top: 6px; overflow-wrap: anywhere; }
+
+/* Solicitudes */
+.form-solicitud { margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--linea); }
+.opciones { border: 0; padding: 0; margin: 0; display: flex; gap: 6px 16px; flex-wrap: wrap; font-size: 14px; }
+.opciones legend { font-weight: 600; margin-bottom: 4px; padding: 0; }
+.opciones label { display: flex; align-items: center; gap: 6px; min-height: 40px; cursor: pointer; }
+.opciones input { width: 20px; height: 20px; min-height: 0; margin: 0; accent-color: var(--azul); }
+.solicitudes { display: grid; gap: 10px; }
+.solicitud { background: var(--papel); border: 1px solid var(--linea); border-left: 6px solid var(--amarillo); border-radius: var(--radio); padding: 14px 16px; box-shadow: var(--sombra); }
+.solicitud.aceptada { border-left-color: #2e9e5b; }
+.solicitud.rechazada { border-left-color: var(--vino); }
+.solicitud.retirada { border-left-color: var(--linea); opacity: .8; }
+.solicitud-cabeza { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.solicitud .mensaje, .incidencia .mensaje { margin-top: 8px; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 15px; }
+.respuesta { background: var(--fondo); border-radius: 10px; padding: 8px 12px; margin-top: 10px; font-size: 14px; }
+.respuesta p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.estado-solicitud { font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 99px; white-space: nowrap; background: var(--amarillo-claro); border: 1px solid var(--amarillo); }
+.estado-solicitud.aceptada { background: #e3f4ea; border-color: #2e9e5b; color: #1d6b3d; }
+.estado-solicitud.rechazada { background: var(--vino-claro); border-color: var(--vino); color: var(--vino); }
+.estado-solicitud.retirada { background: var(--fondo); border-color: var(--linea); color: var(--suave); }
+.contacto { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: #e3f4ea; font-size: 15px; }
+.contacto b { flex-basis: 100%; font-size: 13px; }
+.contacto a { color: var(--azul-osc); font-weight: 700; overflow-wrap: anywhere; min-height: 32px; display: inline-flex; align-items: center; }
+
+/* Incidencias de campo */
+.campo-nueva { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 0 20px; align-items: start; }
+.campo-nueva > .caja:first-child { grid-row: span 2; }
+.principal.gps { margin-top: 4px; background: var(--azul); color: #fff; }
+.principal.gps:hover { background: var(--azul-osc); }
+.coordenadas { font-variant-numeric: tabular-nums; margin-top: 4px; }
+.severidad .sev-baja.activa { background: var(--amarillo); border-color: var(--amarillo); color: var(--tinta); }
+.severidad .sev-media.activa { background: var(--naranja); border-color: var(--naranja); color: var(--tinta); }
+.severidad .sev-alta.activa { background: var(--vino); border-color: var(--vino); color: #fff; }
+.miniaturas { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 4px; }
+.miniaturas li { position: relative; width: 84px; display: grid; gap: 2px; }
+.miniaturas img, .foto-cargando, .foto-falla { width: 84px; height: 84px; object-fit: cover; border-radius: 10px; border: 1px solid var(--linea); display: block; background: var(--fondo); }
+.foto-falla { display: grid; place-items: center; font-size: 12px; color: var(--suave); }
+.foto-cargando { animation: latido 1.2s ease-in-out infinite; }
+@keyframes latido { 50% { opacity: .5; } }
+.miniaturas li > button { position: absolute; top: -8px; right: -8px; width: 32px; height: 32px; border-radius: 50%; border: 2px solid #fff; background: var(--vino); color: #fff; font-size: 18px; line-height: 1; }
+.en-drive { font-size: 12px; font-weight: 700; color: var(--azul); text-align: center; }
+.incidencias { display: grid; gap: 10px; margin-top: 12px; }
+.incidencia { background: var(--papel); border: 1px solid var(--linea); border-left: 6px solid var(--naranja); border-radius: var(--radio); padding: 12px 14px; box-shadow: var(--sombra); scroll-margin: 80px; }
+.incidencia.sev-baja { border-left-color: var(--amarillo); }
+.incidencia.sev-alta { border-left-color: var(--vino); }
+.incidencia.controlada { opacity: .75; }
+.incidencia.resaltada { outline: 3px solid var(--azul); outline-offset: 2px; }
+.leaflet-control-layers { font: 14px Nunito, system-ui, sans-serif; }
+
+@media (max-width: 900px) {
+  .campo-nueva { grid-template-columns: minmax(0, 1fr); }
+  .campo-nueva > .caja:first-child { grid-row: auto; }
+}
+@media (max-width: 560px) {
+  .ofertas { grid-template-columns: minmax(0, 1fr); }
+  .oferta { padding: 14px; }
+  .fila-botones .principal, .fila-botones .secundario:not(.chico) { flex-basis: 100%; }
 }

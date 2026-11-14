@@ -4,3 +4,5 @@ dist/
 *.log
 Backend/respaldos/
 Backend/.vapid.json
+Backend/fotos/
+Backend/credenciales/

@@ -3,7 +3,7 @@ import { scryptSync, randomBytes, timingSafeEqual } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import 'dotenv/config';
 
-export const ROLES = ['administrador', 'operativo', 'cliente', 'monitoreo'];
+export const ROLES = ['administrador', 'operativo', 'cliente', 'monitoreo', 'comprador'];
 
 const SECRETO = process.env.JWT_SECRET && process.env.JWT_SECRET !== 'cambie-este-valor'
   ? process.env.JWT_SECRET

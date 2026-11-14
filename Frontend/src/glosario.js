@@ -323,6 +323,71 @@ export const TERMINOS = [
     usoPoseidon: 'Es el número grande de cada tarjeta. Mueva las prioridades y vuelva a comparar para ver cómo cambia.',
     fuente: 'Modelo de Poseidon',
   },
+  {
+    id: 'indice-agua',
+    nombre: 'Uso eficiente del agua',
+    categoria: 'agua',
+    icono: 'gota',
+    corto: 'Una nota de 0 a 100 que dice qué tan poco riego necesita la rotación de la que sale la cosecha.',
+    explicacion: 'Se calcula con el riego que pide la rotación del productor en su lugar, según el clima de NASA POWER. '
+      + '100 quiere decir que casi toda el agua la pone la lluvia; cerca de 0, que depende mucho del riego. '
+      + 'Alto es 70 o más, medio de 40 a 69 y bajo menos de 40.',
+    ejemplo: 'Dos ofertas de haba: una de una rotación con índice 78 (la lluvia cubre casi todo) y otra con 35 (necesita mucho riego). '
+      + 'La primera usó bastante menos agua de río o de pozo para producir lo mismo.',
+    usoPoseidon: 'Ordena la oferta sostenible y sirve de filtro para cooperativas y mercados. No mide el agua realmente aplicada: es una estimación.',
+    fuente: 'Calculado con datos de NASA POWER',
+    visual: {
+      tipo: 'escala',
+      min: 0, max: 100, decimales: 0,
+      colores: ['#f6e4ea', '#fdebd6', '#eaf1fa', '#1e4e8c'],
+      marcas: [
+        { valor: 35, etiqueta: 'Bajo: depende mucho del riego' },
+        { valor: 55, etiqueta: 'Medio' },
+        { valor: 80, etiqueta: 'Alto: la lluvia cubre casi todo' },
+      ],
+    },
+  },
+  {
+    id: 'practicas-rotacion',
+    nombre: 'Prácticas de rotación',
+    categoria: 'suelo',
+    icono: 'hoja',
+    corto: 'Lo que la rotación del productor hace por el suelo: abonar, cortar plagas, cubrir y airear la tierra.',
+    explicacion: 'Poseidon las calcula con los cultivos que el productor registró, no con lo que dice: si incluye una leguminosa, '
+      + 'si cambia de familia cada campaña, si deja el suelo cubierto casi todo el año (6 meses o menos desnudo) '
+      + 'y si tiene cultivos de raíz profunda que ayudan a que el agua entre en la tierra.',
+    ejemplo: 'Papa → haba → maíz cumple tres: tiene leguminosa (haba), alterna familias y el maíz tiene raíz profunda. '
+      + 'Papa → papa no cumple ninguna.',
+    usoPoseidon: 'Cada oferta muestra qué prácticas cumple su rotación y el comprador puede filtrar por ellas.',
+    fuente: 'Calculado con el catálogo de cultivos de Poseidon',
+  },
+  {
+    id: 'verificada',
+    nombre: 'Rotación verificada',
+    categoria: 'suelo',
+    icono: 'calendario',
+    corto: 'Un técnico de Poseidon revisó la rotación de la parcela de la que sale la cosecha.',
+    explicacion: 'Cuando el agricultor compara rotaciones, un técnico de campo revisa la evaluación y deja una nota. '
+      + 'Desde ese momento sus ofertas aparecen como verificadas. No es una certificación orgánica ni oficial.',
+    ejemplo: 'Una cooperativa que quiere vender “papa de rotación con leguminosa” puede filtrar solo las ofertas verificadas por un técnico.',
+    usoPoseidon: 'Es un filtro de la oferta sostenible. Las ofertas sin verificar también se muestran, con su aviso.',
+    fuente: 'Revisión técnica en Poseidon',
+  },
+  {
+    id: 'presion-plagas',
+    nombre: 'Plagas reportadas cerca',
+    categoria: 'suelo',
+    icono: 'hoja',
+    corto: 'Plagas y enfermedades que los técnicos marcaron en el mapa a menos de 5 km de su parcela.',
+    explicacion: 'Los técnicos de campo registran con GPS y fotos dónde vieron una plaga o enfermedad y en qué cultivo. '
+      + 'Cada plaga ataca a una familia de cultivos: si su rotación siembra esa familia, la plaga tiene comida y se multiplica. '
+      + 'Cuenta más si el reporte es grave, está más cerca y es de este último año.',
+    ejemplo: 'Si hay gorgojo de los Andes a 2 km, una rotación sin papa (ni otra solanácea) por una o dos campañas corta su ciclo, '
+      + 'porque el gorgojo no encuentra dónde poner sus huevos.',
+    usoPoseidon: 'Las rotaciones que siembran la familia atacada bajan de puntaje (más aún si la repiten dos campañas seguidas) '
+      + 'y la explicación lo dice. Cuando el técnico marca la incidencia como controlada, deja de contar.',
+    fuente: 'Incidencias registradas por técnicos de Poseidon',
+  },
 ];
 
 const POR_ID = Object.fromEntries(TERMINOS.map((t) => [t.id, t]));

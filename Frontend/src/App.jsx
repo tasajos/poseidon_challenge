@@ -8,6 +8,9 @@ import Monitoreo from './paginas/Monitoreo.jsx';
 import Admin from './paginas/Admin.jsx';
 import Alertas from './paginas/Alertas.jsx';
 import Glosario from './paginas/Glosario.jsx';
+import Comprador from './paginas/Comprador.jsx';
+import Ventas from './paginas/Ventas.jsx';
+import Campo from './paginas/Campo.jsx';
 
 // Cada vista exige al menos uno de sus permisos (el glosario, ninguno). El menú muestra solo las vistas permitidas;
 // el backend vuelve a comprobar cada permiso en cada petición.
@@ -16,10 +19,13 @@ const MODULOS = [
   { clave: 'revision', permisos: ['revisar'], Panel: Operativo, menu: 'Revisión', titulo: 'Revisión técnica', bajada: 'Evaluaciones de los agricultores por validar' },
   { clave: 'monitoreo', permisos: ['reportes'], Panel: Monitoreo, menu: 'Monitoreo', titulo: 'Monitoreo', bajada: 'Reporte regional: parcelas, alertas y actividad' },
   { clave: 'alertas', permisos: ['alertas'], Panel: Alertas, menu: 'Alertas', titulo: 'Alertas climáticas', bajada: 'Avisos de helada y sequía en su teléfono' },
+  { clave: 'oferta', permisos: ['comprar'], Panel: Comprador, menu: 'Oferta sostenible', titulo: 'Oferta sostenible', bajada: 'Cosechas de rotaciones que cuidan el suelo y el agua' },
+  { clave: 'ventas', permisos: ['ofertar'], Panel: Ventas, menu: 'Mis ventas', titulo: 'Mis ventas', bajada: 'Publique su cosecha y responda a compradores locales' },
+  { clave: 'campo', permisos: ['incidencias'], Panel: Campo, menu: 'Plagas en campo', titulo: 'Plagas y enfermedades en campo', bajada: 'Marque incidencias con GPS y fotos desde el teléfono' },
   { clave: 'admin', permisos: ['usuarios', 'respaldos'], Panel: Admin, menu: 'Administración', titulo: 'Administración', bajada: 'Usuarios, permisos, respaldos y sistema' },
   { clave: 'glosario', permisos: [], Panel: Glosario, menu: 'Glosario', titulo: 'Glosario y guía', bajada: 'Los términos científicos explicados con palabras sencillas y ejemplos' },
 ];
-const INICIO = { cliente: 'finca', operativo: 'revision', monitoreo: 'monitoreo', administrador: 'admin' };
+const INICIO = { cliente: 'finca', operativo: 'revision', monitoreo: 'monitoreo', administrador: 'admin', comprador: 'oferta' };
 
 function modulosDe(usuario) {
   const lista = MODULOS.filter((m) => !m.permisos.length || m.permisos.some((p) => puede(usuario, p)));

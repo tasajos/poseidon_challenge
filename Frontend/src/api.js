@@ -21,6 +21,29 @@ async function pedir(ruta, { method = 'GET', body } = {}) {
   return datos;
 }
 
+// Fotos: se suben como binario (una por petición) y se leen con el token, porque la ruta exige sesión.
+async function enviarFoto(ruta, blob) {
+  const r = await fetch(BASE + ruta, {
+    method: 'POST',
+    headers: { 'Content-Type': blob.type, ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+    body: blob,
+  });
+  const datos = await r.json().catch(() => ({}));
+  if (!r.ok) throw Object.assign(new Error(datos.error || `Error ${r.status}`), { status: r.status });
+  return datos;
+}
+
+async function leerFoto(ruta) {
+  const r = await fetch(BASE + ruta, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || `Error ${r.status}`);
+  return r.blob();
+}
+
+// { cultivos: ['papa'], verificada: true, agua: '' } → "cultivos=papa&verificada=1"
+const consulta = (filtros) => new URLSearchParams(Object.entries(filtros)
+  .filter(([, v]) => v !== '' && v !== false && v != null && !(Array.isArray(v) && !v.length))
+  .map(([k, v]) => [k, Array.isArray(v) ? v.join(',') : v === true ? '1' : String(v)])).toString();
+
 export const api = {
   login: (email, password) => pedir('/api/auth/login', { method: 'POST', body: { email, password } }),
   yo: () => pedir('/api/auth/yo'),
@@ -46,4 +69,20 @@ export const api = {
   desuscribir: (endpoint) => pedir('/api/alertas/suscripcion', { method: 'DELETE', body: { endpoint } }),
   alertaPrueba: () => pedir('/api/alertas/prueba', { method: 'POST' }),
   revisarAlertas: () => pedir('/api/alertas/revisar', { method: 'POST' }),
+  // Oferta sostenible y solicitudes (HU-CLI-02, HU-CLI-03)
+  misOfertas: () => pedir('/api/mis-ofertas'),
+  publicarOferta: (cuerpo) => pedir('/api/ofertas', { method: 'POST', body: cuerpo }),
+  cambiarOferta: (id, activa) => pedir(`/api/ofertas/${id}`, { method: 'PATCH', body: { activa } }),
+  ofertas: (filtros = {}) => pedir(`/api/ofertas?${consulta(filtros)}`),
+  solicitar: (cuerpo) => pedir('/api/solicitudes', { method: 'POST', body: cuerpo }),
+  solicitudesEnviadas: () => pedir('/api/solicitudes/enviadas'),
+  solicitudesRecibidas: () => pedir('/api/solicitudes/recibidas'),
+  responderSolicitud: (id, cuerpo) => pedir(`/api/solicitudes/${id}/respuesta`, { method: 'PATCH', body: cuerpo }),
+  retirarSolicitud: (id) => pedir(`/api/solicitudes/${id}/retirar`, { method: 'POST' }),
+  // Incidencias de campo (HU-OPT-02)
+  incidencias: () => pedir('/api/incidencias'),
+  registrarIncidencia: (cuerpo) => pedir('/api/incidencias', { method: 'POST', body: cuerpo }),
+  estadoIncidencia: (id, estado) => pedir(`/api/incidencias/${id}`, { method: 'PATCH', body: { estado } }),
+  subirFoto: (id, blob) => enviarFoto(`/api/incidencias/${id}/fotos`, blob),
+  foto: (id, fotoId) => leerFoto(`/api/incidencias/${id}/fotos/${fotoId}`),
 };

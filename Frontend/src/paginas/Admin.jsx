@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { api } from '../api.js';
 import { Pestanas, Stat, fecha, fechaHora, puede, useDatos } from '../componentes.jsx';
 
-const ROLES = ['administrador', 'operativo', 'cliente', 'monitoreo'];
-const PLURAL = { administrador: 'Administradores', operativo: 'Operativos', cliente: 'Clientes', monitoreo: 'Monitoreo' };
-const QUIEN = { administrador: 'Administrador', operativo: 'Técnico operativo', cliente: 'Agricultor (cliente)', monitoreo: 'Gestor de monitoreo' };
-const TONO = { administrador: 'vino', operativo: 'naranja', cliente: 'azul', monitoreo: 'amarillo' };
+const ROLES = ['administrador', 'operativo', 'cliente', 'monitoreo', 'comprador'];
+const PLURAL = { administrador: 'Administradores', operativo: 'Operativos', cliente: 'Clientes', monitoreo: 'Monitoreo', comprador: 'Compradores' };
+const QUIEN = { administrador: 'Administrador', operativo: 'Técnico operativo', cliente: 'Agricultor (cliente)', monitoreo: 'Gestor de monitoreo', comprador: 'Comprador (cooperativa o mercado)' };
+const TONO = { administrador: 'vino', operativo: 'naranja', cliente: 'azul', monitoreo: 'amarillo', comprador: 'azul' };
 const HELADA = ['Sensible', 'Media', 'Tolerante'];
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
 
@@ -291,6 +291,12 @@ function Sistema() {
         <dd>Helada: mínima diaria ≤ {a.umbrales.heladaC} °C · Sequía: lluvia de 30 días por debajo del {a.umbrales.sequiaPct} % de lo normal</dd>
         <dt>SMS</dt>
         <dd>{s.sms_configurado ? 'Twilio configurado' : 'Simulado: falta configurar Twilio (TWILIO_* en .env)'}</dd>
+        <dt>Fotos de campo</dt>
+        <dd className={s.fotos.almacen === 'drive' && !s.fotos.ok ? 'problema' : undefined}>
+          {s.fotos.almacen === 'drive'
+            ? `Google Drive ${s.fotos.ok ? 'conectado' : 'con problemas'}: ${s.fotos.detalle}`
+            : `${s.fotos.detalle} (configure GOOGLE_DRIVE_* en .env)`}
+        </dd>
       </dl>
     </div>
   );

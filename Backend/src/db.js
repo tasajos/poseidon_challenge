@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
 import 'dotenv/config';
 import { hashPassword } from './auth.js';
-import { POR_DEFECTO, FIJOS } from './permisos.js';
+import { PERMISOS, POR_DEFECTO, FIJOS, ORIGINALES } from './permisos.js';
 
 const leerJson = async (nombre) => JSON.parse(
   await readFile(new URL(`../../Database/${nombre}`, import.meta.url), 'utf8'),
@@ -15,7 +15,7 @@ export const usuariosDemo = () => leerJson('usuarios_demo.json');
 
 let pool = null;
 // Cuando no hay MySQL: { usuarios, evaluaciones (parcela + evaluación juntas), rol_permisos,
-// preferencias_alertas, suscripciones_push, alertas_enviadas }
+// preferencias_alertas, suscripciones_push, alertas_enviadas, ofertas, solicitudes, incidencias, incidencia_fotos }
 let memoria = null;
 
 export function getPool() {
@@ -71,7 +71,72 @@ const MIGRACIONES = [
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY una_vez (usuario_id, clave),
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE)`,
+  // Rol comprador (cooperativa o mercado local)
+  `ALTER TABLE usuarios MODIFY rol ENUM('administrador','operativo','cliente','monitoreo','comprador') NOT NULL DEFAULT 'cliente'`,
+  `ALTER TABLE rol_permisos MODIFY rol ENUM('administrador','operativo','cliente','monitoreo','comprador') NOT NULL`,
+  `CREATE TABLE IF NOT EXISTS permisos_sembrados (
+    permiso VARCHAR(30) PRIMARY KEY)`,
+  `CREATE TABLE IF NOT EXISTS ofertas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id INT NOT NULL,
+    evaluacion_id INT NOT NULL,
+    cultivo VARCHAR(30) NOT NULL,
+    cantidad DECIMAL(10,2) NOT NULL,
+    unidad ENUM('kg','qq','t') NOT NULL,
+    disponible_desde CHAR(7) NOT NULL,
+    nota VARCHAR(300) NULL,
+    activa BOOLEAN NOT NULL DEFAULT TRUE,
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    FOREIGN KEY (evaluacion_id) REFERENCES evaluaciones(id) ON DELETE CASCADE)`,
+  `CREATE TABLE IF NOT EXISTS solicitudes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    oferta_id INT NOT NULL,
+    comprador_id INT NOT NULL,
+    productor_id INT NOT NULL,
+    tipo ENUM('compra','contacto') NOT NULL,
+    cantidad DECIMAL(10,2) NULL,
+    mensaje VARCHAR(1000) NOT NULL,
+    estado ENUM('pendiente','aceptada','rechazada','retirada') NOT NULL DEFAULT 'pendiente',
+    respuesta VARCHAR(1000) NULL,
+    telefono_productor VARCHAR(20) NULL,
+    respondido_en TIMESTAMP NULL,
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (oferta_id) REFERENCES ofertas(id) ON DELETE CASCADE,
+    FOREIGN KEY (comprador_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    FOREIGN KEY (productor_id) REFERENCES usuarios(id) ON DELETE CASCADE)`,
+  `CREATE TABLE IF NOT EXISTS incidencias (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    tecnico_id INT NOT NULL,
+    tipo ENUM('plaga','enfermedad','deficiencia') NOT NULL,
+    agente VARCHAR(80) NOT NULL,
+    cultivo VARCHAR(30) NULL,
+    severidad ENUM('baja','media','alta') NOT NULL,
+    lat DECIMAL(9,6) NOT NULL,
+    lon DECIMAL(9,6) NOT NULL,
+    precision_m SMALLINT NULL,
+    nota VARCHAR(500) NULL,
+    estado ENUM('activa','controlada') NOT NULL DEFAULT 'activa',
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (tecnico_id) REFERENCES usuarios(id) ON DELETE CASCADE)`,
+  `CREATE TABLE IF NOT EXISTS incidencia_fotos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    incidencia_id INT NOT NULL,
+    almacen ENUM('drive','local') NOT NULL,
+    archivo VARCHAR(200) NOT NULL,
+    enlace VARCHAR(300) NULL,
+    mime VARCHAR(40) NOT NULL,
+    bytes INT NOT NULL,
+    subido_por INT NULL,
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (incidencia_id) REFERENCES incidencias(id) ON DELETE CASCADE,
+    FOREIGN KEY (subido_por) REFERENCES usuarios(id) ON DELETE SET NULL)`,
 ];
+
+// Aplica las migraciones (idempotentes). La usan el arranque del servidor y npm run seed.
+export async function migrar(db = getPool()) {
+  for (const sql of MIGRACIONES) await db.query(sql);
+}
 
 const filasPorDefecto = () => Object.entries(POR_DEFECTO)
   .flatMap(([rol, lista]) => lista.map((permiso) => ({ rol, permiso })));
@@ -80,7 +145,7 @@ export async function iniciar() {
   try {
     const db = getPool();
     await db.query('SELECT 1 FROM usuarios LIMIT 1');
-    for (const sql of MIGRACIONES) await db.query(sql);
+    await migrar(db);
     await sembrarPermisos();
     console.log('[db] Conectado a MySQL');
   } catch (e) {
@@ -99,18 +164,30 @@ export async function iniciar() {
       preferencias_alertas: [],
       suscripciones_push: [],
       alertas_enviadas: [],
+      ofertas: [],
+      solicitudes: [],
+      incidencias: [],
+      incidencia_fotos: [],
     };
     console.warn(`[db] MySQL no disponible (${e.code || e.message}). Modo memoria: los datos no se guardan.`);
   }
 }
 
-// Carga los permisos por defecto solo si la tabla está vacía, para no pisar lo que el administrador cambió.
+// Carga los valores por defecto de cada permiso una sola vez (permisos_sembrados lo registra), así un
+// permiso nuevo llega a una base existente sin pisar lo que el administrador cambió en los demás.
+// Devuelve la lista de permisos sembrados en esta llamada.
 export async function sembrarPermisos(db = getPool()) {
   const [[{ n }]] = await db.query('SELECT COUNT(*) AS n FROM rol_permisos');
-  if (n > 0) return false;
-  const filas = filasPorDefecto();
-  await db.query('INSERT INTO rol_permisos (rol, permiso) VALUES ?', [filas.map((f) => [f.rol, f.permiso])]);
-  return true;
+  const [hechos] = await db.query('SELECT permiso FROM permisos_sembrados');
+  // Base anterior al registro: los permisos originales ya estaban configurados.
+  const ya = new Set(hechos.length ? hechos.map((f) => f.permiso) : n > 0 ? ORIGINALES : []);
+  const nuevos = Object.keys(PERMISOS).filter((p) => !ya.has(p));
+  const filas = filasPorDefecto().filter((f) => nuevos.includes(f.permiso));
+  if (filas.length) await db.query('INSERT IGNORE INTO rol_permisos (rol, permiso) VALUES ?', [filas.map((f) => [f.rol, f.permiso])]);
+  const registrar = Object.keys(PERMISOS).filter((p) => !hechos.some((f) => f.permiso === p));
+  if (registrar.length) await db.query('INSERT IGNORE INTO permisos_sembrados (permiso) VALUES ?', [registrar.map((p) => [p])]);
+  if (filas.length) cachePermisos = null;
+  return nuevos;
 }
 
 const json = (v) => (typeof v === 'string' ? JSON.parse(v) : v); // MariaDB devuelve JSON como texto
@@ -396,6 +473,244 @@ export async function listarAlertas(usuarioId) {
   return f.map((a) => ({ ...a, canales: json(a.canales) }));
 }
 
+// ---------- Oferta sostenible (HU-CLI-02) ----------
+const SQL_OFERTAS = `
+  SELECT o.id, o.usuario_id, o.evaluacion_id, o.cultivo, o.cantidad, o.unidad, o.disponible_desde, o.nota, o.activa,
+         o.creado_en, e.resultado, e.estado AS estado_evaluacion, p.nombre AS parcela, p.lat, p.lon,
+         u.nombre AS productor, u.activo AS productor_activo
+  FROM ofertas o
+  JOIN evaluaciones e ON e.id = o.evaluacion_id
+  JOIN parcelas p ON p.id = e.parcela_id
+  JOIN usuarios u ON u.id = o.usuario_id`;
+
+const oferta = (f) => f && {
+  ...f, lat: Number(f.lat), lon: Number(f.lon), cantidad: Number(f.cantidad),
+  activa: Boolean(f.activa), productor_activo: Boolean(f.productor_activo), resultado: json(f.resultado),
+};
+
+function ofertaDeMemoria(o) {
+  const e = memoria.evaluaciones.find((x) => x.id === o.evaluacion_id);
+  const u = memoria.usuarios.find((x) => x.id === o.usuario_id);
+  if (!e || !u) return null;
+  return {
+    ...o, resultado: e.resultado, estado_evaluacion: e.estado, parcela: e.parcela, lat: e.lat, lon: e.lon,
+    productor: u.nombre, productor_activo: u.activo,
+  };
+}
+
+// usuarioId: solo las de ese productor. publicas: solo activas de productores activos.
+export async function listarOfertas({ usuarioId, publicas } = {}) {
+  let filas;
+  if (memoria) filas = memoria.ofertas.map(ofertaDeMemoria).filter(Boolean).reverse();
+  else {
+    const donde = [], valores = [];
+    if (usuarioId) { donde.push('o.usuario_id = ?'); valores.push(usuarioId); }
+    if (publicas) donde.push('o.activa AND u.activo');
+    const where = donde.length ? `WHERE ${donde.join(' AND ')}` : '';
+    [filas] = await getPool().query(`${SQL_OFERTAS} ${where} ORDER BY o.id DESC LIMIT 500`, valores);
+    filas = filas.map(oferta);
+  }
+  return filas.filter((o) => (!usuarioId || o.usuario_id === usuarioId) && (!publicas || (o.activa && o.productor_activo)));
+}
+
+export async function obtenerOferta(id) {
+  if (memoria) {
+    const o = memoria.ofertas.find((x) => x.id === Number(id));
+    return o ? ofertaDeMemoria(o) : undefined;
+  }
+  const [f] = await getPool().query(`${SQL_OFERTAS} WHERE o.id = ?`, [id]);
+  return oferta(f[0]);
+}
+
+export async function crearOferta({ usuarioId, evaluacionId, cultivo, cantidad, unidad, disponible, nota }) {
+  if (memoria) {
+    const id = proximoId(memoria.ofertas);
+    memoria.ofertas.push({
+      id, usuario_id: usuarioId, evaluacion_id: evaluacionId, cultivo, cantidad, unidad,
+      disponible_desde: disponible, nota, activa: true, creado_en: new Date(),
+    });
+    return id;
+  }
+  const [r] = await getPool().query(
+    'INSERT INTO ofertas (usuario_id, evaluacion_id, cultivo, cantidad, unidad, disponible_desde, nota) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    [usuarioId, evaluacionId, cultivo, cantidad, unidad, disponible, nota]);
+  return r.insertId;
+}
+
+export async function cambiarOferta(id, usuarioId, { activa }) {
+  if (memoria) {
+    const o = memoria.ofertas.find((x) => x.id === Number(id) && x.usuario_id === usuarioId);
+    if (!o) return false;
+    o.activa = activa;
+    return true;
+  }
+  const [r] = await getPool().query('UPDATE ofertas SET activa = ? WHERE id = ? AND usuario_id = ?', [activa, id, usuarioId]);
+  return r.affectedRows > 0;
+}
+
+// ---------- Solicitudes de compra (HU-CLI-03) ----------
+const SQL_SOLICITUDES = `
+  SELECT s.id, s.oferta_id, s.comprador_id, s.productor_id, s.tipo, s.cantidad, s.mensaje, s.estado, s.respuesta,
+         s.telefono_productor, s.respondido_en, s.creado_en, o.cultivo, o.unidad, o.cantidad AS cantidad_ofertada,
+         pa.lat, pa.lon, c.nombre AS comprador, c.email AS comprador_email, p.nombre AS productor, p.email AS productor_email
+  FROM solicitudes s
+  JOIN ofertas o ON o.id = s.oferta_id
+  JOIN evaluaciones e ON e.id = o.evaluacion_id
+  JOIN parcelas pa ON pa.id = e.parcela_id
+  JOIN usuarios c ON c.id = s.comprador_id
+  JOIN usuarios p ON p.id = s.productor_id`;
+
+const solicitud = (f) => f && {
+  ...f, lat: Number(f.lat), lon: Number(f.lon), cantidad: f.cantidad === null ? null : Number(f.cantidad),
+  cantidad_ofertada: Number(f.cantidad_ofertada),
+};
+
+function solicitudDeMemoria(s) {
+  const o = memoria.ofertas.find((x) => x.id === s.oferta_id);
+  const e = o && memoria.evaluaciones.find((x) => x.id === o.evaluacion_id);
+  const c = memoria.usuarios.find((x) => x.id === s.comprador_id);
+  const p = memoria.usuarios.find((x) => x.id === s.productor_id);
+  if (!o || !e || !c || !p) return null;
+  return {
+    ...s, cultivo: o.cultivo, unidad: o.unidad, cantidad_ofertada: o.cantidad, lat: e.lat, lon: e.lon,
+    comprador: c.nombre, comprador_email: c.email, productor: p.nombre, productor_email: p.email,
+  };
+}
+
+export async function listarSolicitudes({ compradorId, productorId }) {
+  const campo = compradorId ? 'comprador_id' : 'productor_id';
+  const valor = compradorId || productorId;
+  if (memoria) return memoria.solicitudes.filter((s) => s[campo] === valor).map(solicitudDeMemoria).filter(Boolean).reverse();
+  const [f] = await getPool().query(`${SQL_SOLICITUDES} WHERE s.${campo} = ? ORDER BY s.id DESC LIMIT 200`, [valor]);
+  return f.map(solicitud);
+}
+
+export async function obtenerSolicitud(id) {
+  if (memoria) {
+    const s = memoria.solicitudes.find((x) => x.id === Number(id));
+    return s ? solicitudDeMemoria(s) : undefined;
+  }
+  const [f] = await getPool().query(`${SQL_SOLICITUDES} WHERE s.id = ?`, [id]);
+  return solicitud(f[0]);
+}
+
+export async function crearSolicitud({ ofertaId, compradorId, productorId, tipo, cantidad, mensaje }) {
+  if (memoria) {
+    const id = proximoId(memoria.solicitudes);
+    memoria.solicitudes.push({
+      id, oferta_id: ofertaId, comprador_id: compradorId, productor_id: productorId, tipo, cantidad, mensaje,
+      estado: 'pendiente', respuesta: null, telefono_productor: null, respondido_en: null, creado_en: new Date(),
+    });
+    return id;
+  }
+  const [r] = await getPool().query(
+    'INSERT INTO solicitudes (oferta_id, comprador_id, productor_id, tipo, cantidad, mensaje) VALUES (?, ?, ?, ?, ?, ?)',
+    [ofertaId, compradorId, productorId, tipo, cantidad, mensaje]);
+  return r.insertId;
+}
+
+// Solo cambia solicitudes pendientes: una respuesta no se puede reescribir.
+export async function cerrarSolicitud(id, { estado, respuesta = null, telefono = null }) {
+  if (memoria) {
+    const s = memoria.solicitudes.find((x) => x.id === Number(id) && x.estado === 'pendiente');
+    if (!s) return false;
+    Object.assign(s, { estado, respuesta, telefono_productor: telefono, respondido_en: new Date() });
+    return true;
+  }
+  const [r] = await getPool().query(
+    "UPDATE solicitudes SET estado = ?, respuesta = ?, telefono_productor = ?, respondido_en = NOW() WHERE id = ? AND estado = 'pendiente'",
+    [estado, respuesta, telefono, id]);
+  return r.affectedRows > 0;
+}
+
+// Para limitar envíos: cuántas solicitudes hizo el comprador desde una fecha.
+export async function contarSolicitudesDesde(compradorId, desde) {
+  if (memoria) return memoria.solicitudes.filter((s) => s.comprador_id === compradorId && s.creado_en >= desde).length;
+  const [[{ n }]] = await getPool().query('SELECT COUNT(*) AS n FROM solicitudes WHERE comprador_id = ? AND creado_en >= ?', [compradorId, desde]);
+  return Number(n);
+}
+
+export async function pendienteDe(compradorId, ofertaId) {
+  if (memoria) return memoria.solicitudes.some((s) => s.comprador_id === compradorId && s.oferta_id === ofertaId && s.estado === 'pendiente');
+  const [f] = await getPool().query("SELECT 1 FROM solicitudes WHERE comprador_id = ? AND oferta_id = ? AND estado = 'pendiente'", [compradorId, ofertaId]);
+  return f.length > 0;
+}
+
+// ---------- Incidencias de campo (HU-OPT-02) ----------
+const incidencia = (f) => f && { ...f, lat: Number(f.lat), lon: Number(f.lon) };
+const conTecnico = (i) => ({ ...i, tecnico: memoria.usuarios.find((u) => u.id === i.tecnico_id)?.nombre || null });
+const SQL_INCIDENCIAS = 'SELECT i.*, u.nombre AS tecnico FROM incidencias i JOIN usuarios u ON u.id = i.tecnico_id';
+
+// desde: solo las creadas después de esa fecha.
+export async function listarIncidencias({ desde } = {}) {
+  if (memoria) return memoria.incidencias.filter((i) => !desde || i.creado_en >= desde).map(conTecnico).reverse();
+  const [f] = await getPool().query(
+    `${SQL_INCIDENCIAS} ${desde ? 'WHERE i.creado_en >= ?' : ''} ORDER BY i.id DESC LIMIT 1000`, desde ? [desde] : []);
+  return f.map(incidencia);
+}
+
+export async function obtenerIncidencia(id) {
+  if (memoria) {
+    const i = memoria.incidencias.find((x) => x.id === Number(id));
+    return i ? conTecnico(i) : undefined;
+  }
+  const [f] = await getPool().query(`${SQL_INCIDENCIAS} WHERE i.id = ?`, [id]);
+  return incidencia(f[0]);
+}
+
+export async function crearIncidencia({ tecnicoId, tipo, agente, cultivo, severidad, lat, lon, precision, nota }) {
+  if (memoria) {
+    const id = proximoId(memoria.incidencias);
+    memoria.incidencias.push({
+      id, tecnico_id: tecnicoId, tipo, agente, cultivo, severidad, lat, lon, precision_m: precision, nota,
+      estado: 'activa', creado_en: new Date(),
+    });
+    return id;
+  }
+  const [r] = await getPool().query(
+    `INSERT INTO incidencias (tecnico_id, tipo, agente, cultivo, severidad, lat, lon, precision_m, nota)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, [tecnicoId, tipo, agente, cultivo, severidad, lat, lon, precision, nota]);
+  return r.insertId;
+}
+
+export async function cambiarEstadoIncidencia(id, estado) {
+  if (memoria) {
+    const i = memoria.incidencias.find((x) => x.id === Number(id));
+    if (!i) return false;
+    i.estado = estado;
+    return true;
+  }
+  const [r] = await getPool().query('UPDATE incidencias SET estado = ? WHERE id = ?', [estado, id]);
+  return r.affectedRows > 0;
+}
+
+export async function fotosDeIncidencias(ids) {
+  if (!ids.length) return [];
+  if (memoria) return memoria.incidencia_fotos.filter((f) => ids.includes(f.incidencia_id));
+  const [f] = await getPool().query('SELECT * FROM incidencia_fotos WHERE incidencia_id IN (?) ORDER BY id', [ids]);
+  return f;
+}
+
+export async function obtenerFoto(id) {
+  if (memoria) return memoria.incidencia_fotos.find((f) => f.id === Number(id));
+  const [f] = await getPool().query('SELECT * FROM incidencia_fotos WHERE id = ?', [id]);
+  return f[0];
+}
+
+export async function agregarFoto({ incidenciaId, almacen, archivo, enlace, mime, bytes, autorId }) {
+  if (memoria) {
+    const id = proximoId(memoria.incidencia_fotos);
+    memoria.incidencia_fotos.push({
+      id, incidencia_id: incidenciaId, almacen, archivo, enlace, mime, bytes, subido_por: autorId, creado_en: new Date(),
+    });
+    return id;
+  }
+  const [r] = await getPool().query(
+    'INSERT INTO incidencia_fotos (incidencia_id, almacen, archivo, enlace, mime, bytes, subido_por) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    [incidenciaId, almacen, archivo, enlace, mime, bytes, autorId]);
+  return r.insertId;
+}
+
 // ---------- Respaldo y restauración ----------
 // Tablas que entran en un respaldo, en orden de inserción. Solo se escriben las columnas listadas.
 export const TABLAS = {
@@ -413,7 +728,28 @@ export const TABLAS = {
     cols: ['id', 'usuario_id', 'parcela_id', 'tipo', 'clave', 'titulo', 'mensaje', 'canales', 'creado_en'],
     json: ['canales'], fechas: ['creado_en'],
   },
+  ofertas: {
+    cols: ['id', 'usuario_id', 'evaluacion_id', 'cultivo', 'cantidad', 'unidad', 'disponible_desde', 'nota', 'activa', 'creado_en'],
+    fechas: ['creado_en'],
+  },
+  solicitudes: {
+    cols: ['id', 'oferta_id', 'comprador_id', 'productor_id', 'tipo', 'cantidad', 'mensaje', 'estado', 'respuesta',
+      'telefono_productor', 'respondido_en', 'creado_en'],
+    fechas: ['respondido_en', 'creado_en'],
+  },
+  incidencias: {
+    cols: ['id', 'tecnico_id', 'tipo', 'agente', 'cultivo', 'severidad', 'lat', 'lon', 'precision_m', 'nota', 'estado', 'creado_en'],
+    fechas: ['creado_en'],
+  },
+  incidencia_fotos: {
+    cols: ['id', 'incidencia_id', 'almacen', 'archivo', 'enlace', 'mime', 'bytes', 'subido_por', 'creado_en'],
+    fechas: ['creado_en'],
+  },
 };
+// Tablas que en modo memoria se guardan tal cual (sin juntar parcela y evaluación).
+const TABLAS_SIMPLES = ['preferencias_alertas', 'suscripciones_push', 'alertas_enviadas', 'ofertas', 'solicitudes', 'incidencias', 'incidencia_fotos'];
+const NUMEROS = { ofertas: ['cantidad'], solicitudes: ['cantidad'], incidencias: ['lat', 'lon'] }; // DECIMAL llega como texto
+
 
 // Normaliza una fila de respaldo: solo columnas conocidas, fechas como Date y JSON como objeto.
 function normalizar(tabla, f) {
@@ -434,9 +770,7 @@ export async function exportar() {
       rol_permisos: m.rol_permisos.map((f) => ({ ...f })),
       parcelas: m.evaluaciones.map((e) => normalizar('parcelas', { ...e, nombre: e.parcela })),
       evaluaciones: m.evaluaciones.map((e) => normalizar('evaluaciones', { ...e, parcela_id: e.id })),
-      preferencias_alertas: m.preferencias_alertas.map((f) => normalizar('preferencias_alertas', f)),
-      suscripciones_push: m.suscripciones_push.map((f) => normalizar('suscripciones_push', f)),
-      alertas_enviadas: m.alertas_enviadas.map((f) => normalizar('alertas_enviadas', f)),
+      ...Object.fromEntries(TABLAS_SIMPLES.map((k) => [k, m[k].map((f) => normalizar(k, f))])),
     };
   }
   const salida = {};
@@ -460,9 +794,12 @@ export async function importar(datos) {
         return { ...e, usuario_id: p.usuario_id, parcela: p.nombre, lat: Number(p.lat), lon: Number(p.lon) };
       }),
       rol_permisos: t.rol_permisos,
-      preferencias_alertas: t.preferencias_alertas,
-      suscripciones_push: t.suscripciones_push,
-      alertas_enviadas: t.alertas_enviadas,
+      ...Object.fromEntries(TABLAS_SIMPLES.map((k) => [k, t[k].map((f) => {
+        const fila = { ...f };
+        for (const c of NUMEROS[k] || []) if (fila[c] !== null) fila[c] = Number(fila[c]);
+        if (k === 'ofertas') fila.activa = Boolean(fila.activa);
+        return fila;
+      })])),
     };
   } else {
     const cx = await getPool().getConnection();

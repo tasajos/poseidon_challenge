@@ -63,8 +63,8 @@ export function Mapa({ puntos = [], onElegir, alto = 240 }) {
       <TileLayer attribution="&copy; OpenStreetMap" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
       {onElegir && <Clic onElegir={onElegir} />}
       {puntos.map((p) => (
-        <CircleMarker key={p.id} center={[p.lat, p.lon]} radius={9}
-          pathOptions={{ color: '#fff', weight: 2, fillColor: p.alerta ? '#7A1F3D' : '#1E4E8C', fillOpacity: 1 }}>
+        <CircleMarker key={p.id} center={[p.lat, p.lon]} radius={p.radio || 9}
+          pathOptions={{ color: '#fff', weight: 2, fillColor: p.color || (p.alerta ? '#7A1F3D' : '#1E4E8C'), fillOpacity: 1 }}>
           {p.texto && <Tooltip>{p.texto}</Tooltip>}
         </CircleMarker>
       ))}
@@ -164,6 +164,11 @@ export function Estrategia({ e }) {
       <ul>
         <li><Termino id="riego">Riego necesario</Termino>: <b>{e.evidencia.deficit_agua_mm} mm</b> por campaña (demanda {e.evidencia.demanda_agua_mm} mm)</li>
         <li><Termino id="suelo-desnudo">Suelo desnudo</Termino>: <b>{e.evidencia.meses_suelo_desnudo} meses</b> al año</li>
+        {(e.evidencia.plagas || []).map((p) => (
+          <li key={p.familia} className="evidencia-plaga">
+            <Termino id="presion-plagas">Plagas reportadas cerca</Termino>: {p.agentes.join(', ')} ({p.familia}, {p.reportes} reporte(s) a {p.distancia_km} km)
+          </li>
+        ))}
         {e.detalle.map((d) => (
           <li key={d.codigo}>{d.nombre}: {d.siembra}–{d.cosecha}, riego {d.deficit_mm} mm
             {d.meses_helada.length > 0 && `, helada en ${d.meses_helada.join(', ')}`}</li>
