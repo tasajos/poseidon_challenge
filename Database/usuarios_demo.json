@@ -1,0 +1,6 @@
+[
+  {"nombre":"Administrador Demo","email":"admin@poseidon.test","rol":"administrador"},
+  {"nombre":"Técnico Demo","email":"operativo@poseidon.test","rol":"operativo"},
+  {"nombre":"Agricultor Demo","email":"cliente@poseidon.test","rol":"cliente"},
+  {"nombre":"Monitoreo Demo","email":"monitoreo@poseidon.test","rol":"monitoreo"}
+]

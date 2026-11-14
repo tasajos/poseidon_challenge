@@ -1,8 +1,10 @@
-// Carga Database/cultivos.json en la tabla cultivos (inserta o actualiza).
-import { getPool, cultivosDeArchivo } from './db.js';
+// Carga en MySQL el catálogo de cultivos y los usuarios de demostración (inserta o actualiza).
+import 'dotenv/config';
+import { getPool, cultivosDeArchivo, usuariosDemo } from './db.js';
+import { hashPassword } from './auth.js';
 
-const cultivos = await cultivosDeArchivo();
 const db = getPool();
+const cultivos = await cultivosDeArchivo();
 for (const c of cultivos) {
   await db.query(
     `INSERT INTO cultivos (codigo, nombre, familia, ciclo_dias, mes_siembra, kc, tolerancia_helada,
@@ -17,4 +19,19 @@ for (const c of cultivos) {
   );
 }
 console.log(`Catálogo cargado: ${cultivos.length} cultivos`);
+
+const clave = process.env.DEMO_PASSWORD;
+if (!clave || clave === 'cambie-esta-clave') {
+  console.warn('Defina DEMO_PASSWORD en .env para crear los usuarios de demostración.');
+} else {
+  const usuarios = await usuariosDemo();
+  for (const u of usuarios) {
+    await db.query(
+      `INSERT INTO usuarios (nombre, email, password_hash, rol) VALUES (?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE nombre=VALUES(nombre), password_hash=VALUES(password_hash), rol=VALUES(rol)`,
+      [u.nombre, u.email, hashPassword(clave), u.rol],
+    );
+  }
+  console.log(`Usuarios de demostración: ${usuarios.map((u) => u.email).join(', ')}`);
+}
 await db.end();
