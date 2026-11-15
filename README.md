@@ -34,28 +34,30 @@ La interfaz es responsive (escritorio y teléfono). Paleta: azul, naranja, amari
 
 ## Puesta en marcha
 
+### 1. Base de datos
+- **SQLite (Predeterminado - ¡No requiere instalar nada!)**:
+  La base de datos se conecta de forma persistente y automática en `Database/poseidon.db` usando el motor SQLite nativo de Node.js. No necesitas instalar MySQL, XAMPP ni MariaDB.
+- **MySQL / MariaDB (Opcional)**:
+  Si en el futuro deseas usar un servidor MySQL tradicional, importa el esquema con `mysql -u root -p < Database/schema.sql` y configura `DB_ENGINE=mysql` en `Backend/.env`.
+
+### 2. Backend (puerto 3001)
 ```bash
-# 1. Base de datos
-mysql -u root -p < Database/schema.sql
-
-# 2. Backend (puerto 3001)
 cd Backend
-cp .env.example .env      # completar MySQL, JWT_SECRET y DEMO_PASSWORD
 npm install
-npm run seed              # carga el catálogo y un usuario de demostración por rol
+npm run seed              # carga el catálogo y usuarios demo en Database/poseidon.db
 npm run dev
+```
 
-# 3. Frontend (puerto 5173), en otra terminal
+### 3. Frontend (puerto 5173), en otra terminal
+```bash
 cd Frontend
 npm install
 npm run dev
 ```
 
-Pruebas del motor: `cd Backend && npm test`.
+Pruebas del motor y API: `cd Backend && npm test`.
 
-Los usuarios de demostración están en `Database/usuarios_demo.json`; su contraseña es el valor de `DEMO_PASSWORD`.
-
-Sin MySQL el backend arranca en modo memoria: todo funciona, pero los datos se pierden al reiniciar.
+Los usuarios de demostración están en `Database/usuarios_demo.json`; la contraseña de todos es `admin123` (definida en `DEMO_PASSWORD` en `Backend/.env`).
 Sin conexión a NASA POWER usa un clima de demostración de Cochabamba y la interfaz lo avisa.
 
 ## API

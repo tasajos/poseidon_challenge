@@ -49,6 +49,7 @@ function CentrarMapa({ centro }) {
 
 function EmblemaPoseidon({ className = 'admin-emblema' }) {
   return (
+<<<<<<< HEAD
     <svg className={className} viewBox="0 0 120 120" aria-hidden="true">
       <circle cx="60" cy="60" r="54" fill="rgba(255,255,255,0.15)" />
       <path d="M20 88 A52 52 0 1 1 103 86" fill="none" stroke="currentColor" strokeWidth="5.5" strokeLinecap="round" />
@@ -62,6 +63,38 @@ function EmblemaPoseidon({ className = 'admin-emblema' }) {
       <path d="M18 89 Q38 78 60 88 T102 86 Q86 101 60 95 T18 89 Z" fill="#1b768f" />
       <path d="M25 97 Q45 87 64 96 T104 93 Q84 109 56 104 T25 97 Z" fill="#38a1c7" />
     </svg>
+=======
+    <>
+      <div className="stats">
+        {ROLES.map((r) => (
+          <Stat key={r} etiqueta={PLURAL[r]}
+            valor={lista.filter((u) => u.rol === r && u.activo).length} tono={TONO[r]} />
+        ))}
+      </div>
+      <Pestanas valor={vista} onCambiar={setVista}
+        opciones={[['usuarios', 'Usuarios'], ['sistema', 'Sistema'], ['catalogo', 'Cultivos']]} />
+
+      {vista === 'usuarios' && <Usuarios lista={lista} yo={usuario} error={usuarios.error} recargar={usuarios.recargar} />}
+      {vista === 'sistema' && t && (
+        <div className="caja">
+          <h2>Estado del sistema</h2>
+          <dl className="ficha">
+            <dt>Base de datos</dt>
+            <dd>
+              {t.base_datos === 'mysql' && 'MySQL conectado'}
+              {t.base_datos === 'sqlite' && 'SQLite conectado (Database/poseidon.db · persistente)'}
+              {t.base_datos !== 'mysql' && t.base_datos !== 'sqlite' && 'Modo memoria: los datos se pierden al reiniciar'}
+            </dd>
+            <dt>Evaluaciones</dt><dd>{t.totales.evaluaciones} en total, {t.totales.pendientes} pendientes de revisión</dd>
+            <dt>Clima</dt>
+            <dd>{t.fuentes_clima['nasa-power'] || 0} con NASA POWER, {t.fuentes_clima.demo || 0} con clima de demostración</dd>
+            <dt>Alertas</dt><dd>{t.totales.alertas} activas</dd>
+          </dl>
+        </div>
+      )}
+      {vista === 'catalogo' && <Catalogo />}
+    </>
+>>>>>>> aac18b5260136d1d4e22fb3a8faff2318cc6c01a
   );
 }
 
