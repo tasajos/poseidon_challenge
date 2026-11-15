@@ -170,4 +170,11 @@ app.use((err, _req, res, _next) => {
 
 await db.iniciar();
 const puerto = Number(process.env.PORT || 3001);
-app.listen(puerto, () => console.log(`API Poseidon en http://localhost:${puerto} (datos: ${db.modo()})`));
+const srv = app.listen(puerto, () => console.log(`API Poseidon en http://localhost:${puerto} (datos: ${db.modo()})`));
+srv.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.log(`API Poseidon ya está activa en http://localhost:${puerto}`);
+    process.exit(0);
+  }
+  throw err;
+});

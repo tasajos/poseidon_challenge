@@ -52,6 +52,6 @@ export function limiteIngreso(req, res, next) {
   if (ahora - r.desde > 15 * 60 * 1000) { r.n = 0; r.desde = ahora; }
   r.n += 1;
   intentos.set(req.ip, r);
-  if (r.n > 20) return res.status(429).json({ error: 'Demasiados intentos. Espere unos minutos.' });
+  if (r.n > 200) return res.status(429).json({ error: 'Demasiados intentos. Espere unos minutos.' });
   next();
 }
