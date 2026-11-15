@@ -1,0 +1,598 @@
+﻿ID del caso;Módulo;Caso de alto nivel;Título;Historia de usuario;Prioridad;Tipo;Rol / usuario;Precondiciones;Datos de prueba;Pasos;Resultado esperado;Resultado obtenido;Estado;Ejecutado por;Fecha de ejecución;ID defecto;Observaciones
+TC-AUT-001;AUT · Autenticación y sesión;HLTC-AUT-01;Ingreso exitoso del administrador;—;Alta;Funcional;administrador;"Backend y frontend en ejecución; seed cargado.";admin@poseidon.test / contraseña = DEMO_PASSWORD;"1. Abrir http://localhost:5173.
+2. Escribir el correo y la contraseña y pulsar ""Ingresar"".
+3. Observar la cabecera.
+4. Observar la vista activa.";"1. Se muestra la pantalla ""Ingresar"" con los campos Correo y Contraseña.
+2. El botón cambia a ""Ingresando…"" y luego se carga la aplicación.
+3. Muestra el logo Poseidon, el nombre ""Administrador Demo"", la insignia ""administrador"" y el botón ""Salir"".
+4. La vista inicial es ""Administración"" y aparece primera en el menú.";;No ejecutado;;;;
+TC-AUT-002;AUT · Autenticación y sesión;HLTC-AUT-01;Vista de inicio de cada rol;—;Alta;Funcional;cliente, operativo, monitoreo, comprador;Usuarios demo activos.;cliente@, operativo@, monitoreo@, comprador@poseidon.test / contraseña = DEMO_PASSWORD;"1. Ingresar como cliente@poseidon.test.
+2. Salir e ingresar como operativo@poseidon.test.
+3. Salir e ingresar como monitoreo@poseidon.test.
+4. Salir e ingresar como comprador@poseidon.test.";"1. La vista inicial es ""Mi finca"".
+2. La vista inicial es ""Asistencia técnica"".
+3. La vista inicial es ""Monitoreo regional"".
+4. La vista inicial es ""Oferta sostenible"".";;No ejecutado;;;;
+TC-AUT-003;AUT · Autenticación y sesión;HLTC-AUT-02;Contraseña incorrecta;—;Alta;Negativa;Anónimo;Usuario cliente@poseidon.test activo.;"cliente@poseidon.test / ""ClaveErronea1""";"1. Ingresar el correo válido y una contraseña incorrecta.
+2. Verificar que no se haya iniciado sesión.";"1. Se muestra el error ""Correo o contraseña incorrectos"".
+2. Permanece en la pantalla de ingreso.";;No ejecutado;;;;
+TC-AUT-004;AUT · Autenticación y sesión;HLTC-AUT-02;Correo inexistente no revela si la cuenta existe;—;Alta;Seguridad;Anónimo;—;noexiste@poseidon.test / cualquier contraseña;"1. Ingresar un correo que no existe.
+2. Comparar en DevTools > Network el código HTTP de ambos casos.";"1. Se muestra exactamente el mismo mensaje ""Correo o contraseña incorrectos"" que en TC-AUT-003.
+2. Ambos responden 401 con el mismo cuerpo.";;No ejecutado;;;;
+TC-AUT-005;AUT · Autenticación y sesión;HLTC-AUT-02;Cuenta pendiente de aprobación;—;Alta;Negativa;operativo (pendiente);Cuenta tecnico2@poseidon.test creada por el administrador y aún pendiente (TC-ADM-002).;tecnico2@poseidon.test / contraseña inicial correcta y una incorrecta;"1. Ingresar con la contraseña correcta.
+2. Ingresar con una contraseña incorrecta.";"1. Error 403: ""Su cuenta está pendiente de aprobación. Un responsable debe habilitarla antes de que pueda ingresar.""
+2. Se muestra ""Correo o contraseña incorrectos"" (no revela que la cuenta está pendiente).";;No ejecutado;;;;
+TC-AUT-006;AUT · Autenticación y sesión;HLTC-AUT-02;Cuenta desactivada no ingresa;—;Alta;Negativa;cliente (inactivo);agricultor2@poseidon.test desactivado por el administrador (TC-ADM-011).;agricultor2@poseidon.test / contraseña correcta;1. Ingresar con las credenciales correctas.;"1. Se muestra ""Correo o contraseña incorrectos""; no ingresa.";;No ejecutado;;;;
+TC-AUT-007;AUT · Autenticación y sesión;HLTC-AUT-02;Correo sin distinguir mayúsculas y con espacios;—;Baja;Funcional;cliente;—;"""  Cliente@Poseidon.TEST  "" / contraseña = DEMO_PASSWORD";1. Ingresar el correo con mayúsculas y espacios alrededor.;1. Ingresa correctamente como Agricultor Demo.;;No ejecutado;;;;
+TC-AUT-008;AUT · Autenticación y sesión;HLTC-AUT-02;Campos obligatorios del formulario de ingreso;—;Baja;Negativa;Anónimo;—;"Campos vacíos; correo ""abc""";"1. Pulsar ""Ingresar"" con ambos campos vacíos.
+2. Escribir ""abc"" en Correo y una contraseña; pulsar ""Ingresar"".";"1. El navegador impide el envío e indica que el campo es obligatorio.
+2. El navegador indica que el correo no tiene un formato válido.";;No ejecutado;;;;
+TC-AUT-009;AUT · Autenticación y sesión;HLTC-AUT-03;Bloqueo tras 20 intentos de ingreso;—;Media;Seguridad;Anónimo;Backend recién reiniciado (contador en memoria en cero). Ejecutar al final del día: bloquea la IP 15 minutos.;Correo válido con contraseña errónea, 21 veces;"1. Realizar 20 intentos de ingreso fallidos seguidos.
+2. Realizar el intento 21 (incluso con la contraseña correcta).
+3. Esperar 15 minutos (o reiniciar el backend) e ingresar con la contraseña correcta.";"1. Cada intento devuelve ""Correo o contraseña incorrectos"".
+2. HTTP 429: ""Demasiados intentos. Espere unos minutos.""
+3. Ingresa correctamente.";;No ejecutado;;;;
+TC-AUT-010;AUT · Autenticación y sesión;HLTC-AUT-04;Cerrar sesión;—;Alta;Funcional;Cualquiera;Sesión iniciada.;—;"1. Pulsar ""Salir"" en la cabecera.
+2. Revisar DevTools > Application > Session Storage.
+3. Pulsar ""Atrás"" del navegador o recargar.";"1. Vuelve a la pantalla ""Ingresar"".
+2. La clave ""poseidon_token"" ya no existe.
+3. Sigue en la pantalla de ingreso; no se muestran datos del usuario.";;No ejecutado;;;;
+TC-AUT-011;AUT · Autenticación y sesión;HLTC-AUT-04;Persistencia de sesión por pestaña;—;Media;Funcional;cliente;Sesión iniciada en una pestaña.;—;"1. Recargar la página (F5).
+2. Abrir la URL en una pestaña nueva.
+3. Cerrar el navegador y volver a abrir la URL.";"1. La sesión se mantiene y vuelve a la aplicación.
+2. Pide ingresar de nuevo (el token vive en sessionStorage de la pestaña).
+3. Pide ingresar de nuevo.";;No ejecutado;;;;
+TC-AUT-012;AUT · Autenticación y sesión;HLTC-AUT-04;Token inválido o vencido;—;Alta;Seguridad;cliente;Sesión iniciada.;Token alterado;"1. En Session Storage modificar un carácter del valor ""poseidon_token"" y recargar.
+2. Llamar GET /api/auth/yo con ""Authorization: Bearer abc"".";"1. Se descarta la sesión y se muestra la pantalla de ingreso.
+2. HTTP 401: ""Sesión no válida. Ingrese de nuevo.""";;No ejecutado;;;;
+TC-AUT-013;AUT · Autenticación y sesión;HLTC-AUT-04;Usuario desactivado con la sesión abierta;—;Alta;Seguridad;cliente + administrador;"agricultor2 con sesión abierta en el navegador A; admin en el navegador B.";agricultor2@poseidon.test;"1. En B, desactivar a agricultor2 (Administración > Usuarios).
+2. En A, cambiar de pestaña del navegador y volver (o realizar cualquier acción).";"1. El cambio se guarda.
+2. La petición devuelve 401 y la aplicación vuelve a la pantalla de ingreso.";;No ejecutado;;;;
+TC-RBAC-001;RBAC · Roles, permisos y navegación;HLTC-RBAC-01;Menú por defecto de cada rol;HU-ADM-04;Alta;Funcional;Todos;Matriz de permisos con los valores por defecto.;Tabla esperada: cliente = Mi finca, Alertas, Mis ventas, Glosario · operativo = Asistencia técnica, Monitoreo, Alertas, Plagas en campo, Glosario · monitoreo = Monitoreo, Alertas, Glosario · administrador = Administración, Asistencia técnica, Monitoreo, Glosario · comprador = Oferta sostenible, Glosario;"1. Ingresar con cada usuario demo y anotar los botones del menú ""Secciones"".
+2. Verificar el botón activo.";"1. Cada rol ve exactamente las vistas de la tabla de datos, con su vista de inicio en primer lugar.
+2. El botón de la vista abierta tiene estilo activo y aria-current=""page"".";;No ejecutado;;;;
+TC-RBAC-002;RBAC · Roles, permisos y navegación;HLTC-RBAC-02;API responde 403 sin el permiso;HU-ADM-04;Alta;Seguridad;comprador, cliente, monitoreo;Tokens de cada rol obtenidos con POST /api/auth/login.;Endpoints: GET /api/monitoreo, GET /api/usuarios, POST /api/incidencias, GET /api/ofertas, POST /api/respaldos;"1. Con el token del comprador llamar GET /api/monitoreo.
+2. Con el token del cliente llamar GET /api/usuarios y POST /api/respaldos.
+3. Con el token de monitoreo llamar POST /api/incidencias.
+4. Con el token del cliente llamar GET /api/ofertas (permiso comprar).";"1. HTTP 403: ""Su rol no tiene permiso para esto.""
+2. HTTP 403 en ambos.
+3. HTTP 403.
+4. HTTP 403.";;No ejecutado;;;;
+TC-RBAC-003;RBAC · Roles, permisos y navegación;HLTC-RBAC-02;API responde 401 sin sesión;HU-ADM-04;Alta;Seguridad;Anónimo;—;GET /api/cultivos, GET /api/parcelas, POST /api/evaluar sin cabecera Authorization;1. Llamar cada endpoint sin cabecera Authorization.;"1. HTTP 401 ""Sesión no válida. Ingrese de nuevo."" en todos; GET /api/health sí responde { ok: true }.";;No ejecutado;;;;
+TC-RBAC-004;RBAC · Roles, permisos y navegación;HLTC-RBAC-03;Permiso retirado rige en la sesión abierta;HU-ADM-04;Alta;Funcional;administrador + cliente;"cliente con sesión abierta en el navegador A; admin en B.";"Permiso ""ofertar"" del rol cliente";"1. En B, Administración > Roles y permisos: retirar ""ofertar"" al rol cliente.
+2. En A, sin salir, cambiar de pestaña del navegador y volver.
+3. En A, llamar GET /api/mis-ofertas con el token actual.
+4. En B, volver a otorgar ""ofertar"" al cliente.";"1. Se guarda el cambio.
+2. El botón ""Mis ventas"" desaparece del menú.
+3. HTTP 403.
+4. Al volver a la pestaña de A reaparece ""Mis ventas"".";;No ejecutado;;;;
+TC-RBAC-005;RBAC · Roles, permisos y navegación;HLTC-RBAC-03;Rol sin permisos ve solo el Glosario;HU-ADM-04;Media;Límite;comprador;Admin retira todos los permisos al rol comprador. Restaurar al terminar.;Rol comprador sin permisos;"1. Ingresar como comprador@poseidon.test.
+2. Restaurar el permiso ""comprar"" al rol comprador.";"1. Solo se muestra la vista ""Glosario y guía"" (sin barra de secciones, porque hay una sola vista).
+2. Al volver a la pestaña reaparece ""Oferta sostenible"".";;No ejecutado;;;;
+TC-ADM-001;ADM · Administración;HLTC-ADM-01;Registrar un agricultor (cuenta activa);HU-ADM-01;Alta;Funcional;administrador;Sesión de administrador.;"Nombre ""Agricultor Dos"", correo agricultor2@poseidon.test, teléfono vacío, rol cliente, contraseña ""Prueba123""";"1. Ir a Administración > Usuarios > Registrar usuario y completar el formulario.
+2. Pulsar registrar.
+3. Salir e ingresar como agricultor2@poseidon.test.";"1. Los campos obligatorios están marcados.
+2. Mensaje: ""Cuenta de Agricultor Dos registrada y habilitada."" y aparece en la tabla Usuarios como activa.
+3. Ingresa y llega a ""Mi finca"".";;No ejecutado;;;;
+TC-ADM-002;ADM · Administración;HLTC-ADM-01;Registrar un técnico (cuenta pendiente);HU-ADM-01;Alta;Funcional;administrador;Sesión de administrador.;"Nombre ""Técnico Dos"", tecnico2@poseidon.test, rol operativo, contraseña ""Prueba123""";"1. Registrar la cuenta con rol operativo.
+2. Revisar la sección ""Cuentas pendientes de aprobación"".
+3. Repetir con roles monitoreo y administrador (admin2@poseidon.test).";"1. Mensaje: ""Cuenta de Técnico Dos registrada. Queda pendiente: un responsable debe aprobarla antes de que pueda ingresar.""
+2. La cuenta aparece pendiente con opciones de aprobar y rechazar.
+3. Ambas quedan pendientes. Con rol comprador la cuenta queda activa.";;No ejecutado;;;;
+TC-ADM-003;ADM · Administración;HLTC-ADM-01;Validaciones por campo del registro;HU-ADM-01;Alta;Negativa;administrador;"Formulario ""Registrar usuario"" abierto.";"Nombre vacío · correo ""juan@"" · teléfono ""70000000"" · contraseña ""1234567"" (7) y ""12345678"" (8)";"1. Enviar con el nombre vacío.
+2. Enviar con correo ""juan@"".
+3. Enviar con teléfono ""70000000"" (sin código de país).
+4. Enviar con contraseña de 7 caracteres.
+5. Enviar con contraseña de exactamente 8 caracteres y datos válidos.";"1. Error ""El nombre es obligatorio"" señalado en el campo Nombre.
+2. Error ""Escriba un correo válido: es el identificador de la cuenta"" en el campo Correo.
+3. Error ""Escriba el teléfono con código de país, por ejemplo +59170000000"" en Teléfono.
+4. Error ""La contraseña debe tener al menos 8 caracteres"".
+5. La cuenta se registra.";;No ejecutado;;;;
+TC-ADM-004;ADM · Administración;HLTC-ADM-01;Correo duplicado;HU-ADM-01;Alta;Negativa;administrador;Existe cliente@poseidon.test.;"""CLIENTE@poseidon.test""";1. Registrar una cuenta con ese correo en mayúsculas.;"1. HTTP 409, error ""Ya existe una cuenta con ese correo"" en el campo Correo.";;No ejecutado;;;;
+TC-ADM-005;ADM · Administración;HLTC-ADM-01;Teléfono con espacios y guiones se normaliza;HU-ADM-01;Baja;Funcional;administrador;—;"Teléfono ""+591 700-00000""";1. Registrar un comprador con ese teléfono.;"1. Se registra y la tabla muestra el teléfono como ""+59170000000"".";;No ejecutado;;;;
+TC-ADM-006;ADM · Administración;HLTC-ADM-02;Doble control: quien registra no aprueba si hay otro administrador;HU-ADM-01;Alta;Seguridad;administrador ×2;admin2@poseidon.test aprobado y activo. tecnico2 registrado por admin@ y pendiente.;tecnico2@poseidon.test;"1. Como admin@, intentar aprobar tecnico2.
+2. Ingresar como admin2@ y aprobar tecnico2.
+3. Ingresar como tecnico2@poseidon.test.";"1. Error 403: ""Otro administrador debe aprobar las cuentas que usted registró"".
+2. La cuenta pasa a activa.
+3. Ingresa y llega a ""Asistencia técnica"".";;No ejecutado;;;;
+TC-ADM-007;ADM · Administración;HLTC-ADM-02;Único administrador aprueba su propio registro;HU-ADM-01;Media;Funcional;administrador;Solo admin@ es administrador activo (admin2 pendiente o desactivado).;"Cuenta operativa nueva ""tecnico3@poseidon.test""";"1. Registrar tecnico3 y aprobarlo con el mismo admin@.
+2. Abrir Administración > Auditoría.";"1. La aprobación se permite.
+2. El evento ""usuario.aprobado"" incluye el aviso ""Aprobada por quien la registró: no hay otro administrador activo"".";;No ejecutado;;;;
+TC-ADM-008;ADM · Administración;HLTC-ADM-02;Rechazar una cuenta pendiente;HU-ADM-01;Media;Funcional;administrador;"Cuenta monitoreo pendiente ""monitoreo2@poseidon.test"".";monitoreo2@poseidon.test;"1. Pulsar rechazar en la cuenta pendiente.
+2. Intentar ingresar como monitoreo2.";"1. La cuenta deja de estar pendiente y queda inactiva; auditoría registra ""usuario.rechazado"".
+2. Muestra ""Correo o contraseña incorrectos"".";;No ejecutado;;;;
+TC-ADM-009;ADM · Administración;HLTC-ADM-02;Aprobar una cuenta ya resuelta;HU-ADM-01;Baja;Negativa;administrador;"Cuenta ya aprobada; su id conocido.";"POST /api/usuarios/:id/aprobacion { ""aprobar"": true }";"1. Enviar la aprobación por API sobre una cuenta ya aprobada.
+2. Enviar { ""aprobar"": ""si"" } sobre una cuenta pendiente.";"1. HTTP 404: ""No hay una cuenta pendiente con ese identificador"".
+2. HTTP 400: ""Indique si aprueba o rechaza la cuenta"".";;No ejecutado;;;;
+TC-ADM-010;ADM · Administración;HLTC-ADM-03;Ascender a rol con privilegios deja la cuenta pendiente;HU-ADM-01;Alta;Seguridad;administrador;agricultor3@poseidon.test activo (cliente).;Cambiar rol cliente → operativo;"1. En Usuarios cambiar el rol de agricultor3 a operativo.
+2. Intentar ingresar como agricultor3.
+3. Revisar Auditoría.";"1. La cuenta aparece en ""Cuentas pendientes de aprobación"".
+2. Mensaje de cuenta pendiente de aprobación.
+3. Evento ""usuario.rol"" con antes: cliente, ahora: operativo, estado: pendiente de aprobación.";;No ejecutado;;;;
+TC-ADM-011;ADM · Administración;HLTC-ADM-03;Desactivar y reactivar un usuario;HU-ADM-01;Alta;Funcional;administrador;agricultor2 activo.;agricultor2@poseidon.test;"1. Desactivar a agricultor2.
+2. Intentar ingresar como agricultor2.
+3. Reactivarlo e ingresar.";"1. La tabla lo muestra inactivo; auditoría ""usuario.desactivado"".
+2. No ingresa (TC-AUT-006).
+3. Ingresa correctamente; auditoría ""usuario.activado"".";;No ejecutado;;;;
+TC-ADM-012;ADM · Administración;HLTC-ADM-03;No puede cambiar su propio rol ni desactivarse;HU-ADM-01;Alta;Negativa;administrador;Sesión de admin@.;Fila del propio admin;1. Intentar cambiar el rol o desactivar la propia cuenta (UI o PATCH /api/usuarios/<propio id>).;"1. HTTP 400: ""No puede cambiar su propio rol ni desactivarse"".";;No ejecutado;;;;
+TC-ADM-013;ADM · Administración;HLTC-ADM-03;Activar una cuenta pendiente no está permitido;HU-ADM-01;Media;Negativa;administrador;Una cuenta pendiente.;"PATCH /api/usuarios/:id { ""activo"": true }";1. Intentar activarla.;"1. HTTP 400: ""La cuenta está pendiente: apruébela en lugar de activarla"".";;No ejecutado;;;;
+TC-ADM-014;ADM · Administración;HLTC-ADM-04;Otorgar y retirar permisos de un rol;HU-ADM-04;Alta;Funcional;administrador;Matriz por defecto.;"Rol monitoreo: otorgar ""ver_todas"" y luego retirarlo";"1. Abrir Administración > Roles y permisos.
+2. Marcar ""ver_todas"" para monitoreo y guardar.
+3. Ingresar como monitoreo.
+4. Retirar ""ver_todas"" a monitoreo.";"1. Se ve la matriz roles × 12 permisos con su descripción.
+2. Se guarda; auditoría ""permisos.cambiados"" con otorgados: [ver_todas].
+3. En Monitoreo aparece la pestaña ""Detalle por parcela"".
+4. Auditoría con retirados: [ver_todas]; la pestaña desaparece.";;No ejecutado;;;;
+TC-ADM-015;ADM · Administración;HLTC-ADM-04;Permiso fijo del administrador y permiso inválido;HU-ADM-04;Alta;Negativa;administrador;—;"PUT /api/permisos/administrador sin ""usuarios""; PUT /api/permisos/cliente [""volar""]; PUT /api/permisos/invitado";"1. Intentar quitar ""usuarios"" al rol administrador.
+2. Enviar un permiso inexistente.
+3. Enviar un rol inexistente.";"1. La casilla está bloqueada en la UI; por API el permiso se conserva en la respuesta.
+2. HTTP 400: ""Lista de permisos no válida"".
+3. HTTP 404: ""Rol no encontrado"".";;No ejecutado;;;;
+TC-ADM-016;ADM · Administración;HLTC-ADM-05;Contenido de la auditoría;HU-ADM-01;Media;Seguridad;administrador;Ejecutados TC-ADM-001 a 014 y una asignación.;—;"1. Abrir Administración > Auditoría.
+2. Buscar en la tabla y en la respuesta de GET /api/auditoria contraseñas o hashes.";"1. Lista registros, aprobaciones, rechazos, cambios de rol, permisos, asignaciones y restauraciones con actor y fecha/hora.
+2. No aparece ninguna contraseña ni hash.";;No ejecutado;;;;
+TC-ADM-017;ADM · Administración;HLTC-ADM-05;Auditoría restringida a quien gestiona usuarios;HU-ADM-01;Media;Seguridad;operativo;—;GET /api/auditoria;1. Llamar el endpoint con el token del técnico.;1. HTTP 403.;;No ejecutado;;;;
+TC-ADM-018;ADM · Administración;HLTC-ADM-06;Asignación automática al técnico con menos carga;HU-OPT-01;Alta;Funcional;cliente + administrador;Técnicos activos: operativo@ (con N parcelas) y tecnico2@ (con menos).;Parcela nueva del cliente;"1. Como cliente, registrar una parcela nueva.
+2. Como admin, abrir Administración > Parcelas y técnicos.";"1. Se guarda con código PAR-xxxxx.
+2. La parcela nueva está asignada al técnico con menos parcelas (tecnico2).";;No ejecutado;;;;
+TC-ADM-019;ADM · Administración;HLTC-ADM-06;Reasignar parcela a otro técnico;HU-OPT-01;Alta;Funcional;administrador + operativo;Parcela asignada a operativo@.;Nuevo técnico: tecnico2@;"1. Reasignar la parcela a tecnico2.
+2. Ingresar como tecnico2 > Asistencia técnica > Mis parcelas.
+3. Ingresar como operativo@.";"1. Se guarda; auditoría ""parcela.asignada"" con antes/ahora.
+2. La parcela aparece.
+3. La parcela ya no aparece en sus parcelas.";;No ejecutado;;;;
+TC-ADM-020;ADM · Administración;HLTC-ADM-06;Asignar a usuario no técnico, inactivo o dejar sin asignar;HU-OPT-01;Media;Negativa;administrador;—;tecnico_id de un comprador, de un técnico inactivo y null;"1. PATCH /api/parcelas/:id/asignacion con el id de un comprador.
+2. Repetir con un técnico desactivado.
+3. Enviar { ""tecnico_id"": null }.";"1. HTTP 400: ""Elija un técnico activo"".
+2. HTTP 400: ""Elija un técnico activo"".
+3. La parcela queda sin técnico asignado.";;No ejecutado;;;;
+TC-ADM-021;ADM · Administración;HLTC-ADM-07;Estado del sistema;—;Baja;Funcional;administrador;—;—;1. Abrir Administración > Sistema.;1. Muestra el modo de base de datos (MySQL o memoria), estado de respaldos, revisión de alertas, si el SMS está configurado y el almacén de fotos (Drive o local).;;No ejecutado;;;;
+TC-ADM-022;ADM · Administración;HLTC-ADM-07;Catálogo de cultivos;—;Baja;Funcional;administrador;—;Database/cultivos.json;1. Abrir Administración > Cultivos.;1. Lista los 10 cultivos (papa, maíz, haba, tarwi, quinua, trigo, cebada, avena forrajera, alfalfa, cebolla) con sus atributos.;;No ejecutado;;;;
+TC-RES-001;RES · Respaldos y restauración;HLTC-RES-01;Crear respaldo manual;—;Media;Funcional;administrador;—;—;"1. Abrir Administración > Respaldos y crear un respaldo manual.
+2. Revisar la carpeta Backend/respaldos/.";"1. Aparece en ""Puntos de restauración"" con fecha/hora y tipo manual.
+2. Existe el archivo JSON del respaldo.";;No ejecutado;;;;
+TC-RES-002;RES · Respaldos y restauración;HLTC-RES-02;Confirmación escrita para restaurar;—;Alta;Negativa;administrador;Existe al menos un respaldo.;Nombre del respaldo con un carácter de menos;"1. Pulsar ""Restaurar…"" en un respaldo.
+2. Escribir el nombre incompleto.
+3. Por API enviar { ""confirmacion"": ""otro"" }.";"1. Se abre el diálogo ""Restaurar a <fecha>"" con el campo ""Para confirmar, escriba el nombre del respaldo"".
+2. El botón de restaurar permanece deshabilitado.
+3. HTTP 400: ""Confirme escribiendo el nombre del respaldo"".";;No ejecutado;;;;
+TC-RES-003;RES · Respaldos y restauración;HLTC-RES-02;Restaurar un respaldo y deshacer;—;Alta;Funcional;administrador;"Respaldo R1 creado; luego se registra una parcela nueva P-X.";Respaldo R1;"1. Restaurar R1 escribiendo su nombre exacto.
+2. Verificar como cliente sus parcelas.
+3. Revisar los puntos de restauración.
+4. Restaurar el respaldo ""previo-…"".";"1. La restauración termina con éxito.
+2. P-X ya no existe (estado de R1).
+3. Hay un respaldo ""previo-…"" creado justo antes de restaurar.
+4. P-X vuelve a existir. Auditoría registra ""respaldo.restaurado"" con el estado anterior.";;No ejecutado;;;;
+TC-RES-004;RES · Respaldos y restauración;HLTC-RES-01;Respaldo automático y retención;—;Media;Funcional;administrador;.env con BACKUP_HORA a 2 minutos de la hora actual y BACKUP_RETENER=3.;—;"1. Esperar a la hora configurada.
+2. Crear respaldos hasta superar 3 automáticos (cambiando la hora o reiniciando tras la hora).
+3. Apagar el backend antes de BACKUP_HORA y encenderlo después.";"1. Se crea un respaldo automático en la lista.
+2. Solo se conservan los 3 más recientes.
+3. Al arrancar crea el respaldo pendiente del día.";;No ejecutado;;;;
+TC-RES-005;RES · Respaldos y restauración;HLTC-RES-01;"Respaldos solo con permiso ""respaldos""";—;Media;Seguridad;monitoreo;—;GET/POST /api/respaldos;1. Llamar los endpoints con el token de monitoreo.;1. HTTP 403.;;No ejecutado;;;;
+TC-PAR-001;PAR · Registro de parcelas;HLTC-PAR-01;Registrar parcela marcando un punto en el mapa;HU-USR-01;Alta;Funcional;cliente;"Sesión de cliente; modo bajo consumo desactivado.";"Nombre ""Chacra Tiquipaya"", cultivo Papa, superficie 1.5, etapa Siembra, riego ""Riego solo en algunos meses""; punto cerca de Tiquipaya";"1. Ir a Mi finca > Mis parcelas e iniciar el registro.
+2. Elegir ""Marcar un punto"", tocar el mapa y pulsar ""Continuar"".
+3. Completar los datos y continuar.
+4. Guardar.
+5. Volver a ""Mis parcelas"".";"1. Paso 1 ""¿Dónde está su parcela?"" con mapa y opciones ""Marcar un punto"" / ""Dibujar el perímetro"".
+2. Se muestra un marcador y pasa al paso 2 ""Datos de la parcela"".
+3. Paso 3 ""Revise antes de guardar"" con todos los datos y la zona (Tiquipaya).
+4. Mensaje ""Parcela registrada"" con identificador PAR-xxxxx (5 dígitos) y botones ""Ver la ficha"" y ""Comparar rotaciones"".
+5. La parcela aparece en la lista.";;No ejecutado;;;;
+TC-PAR-002;PAR · Registro de parcelas;HLTC-PAR-01;Registrar parcela escribiendo coordenadas;HU-USR-01;Alta;Funcional;cliente;—;Lat -17.3895, Lon -66.1568;"1. En el paso 1 escribir latitud y longitud.
+2. Completar el registro solo con el nombre.";"1. El marcador del mapa se mueve a esas coordenadas.
+2. Se guarda correctamente.";;No ejecutado;;;;
+TC-PAR-003;PAR · Registro de parcelas;HLTC-PAR-01;Usar la ubicación del GPS;HU-USR-01;Media;Funcional;cliente;Teléfono con GPS, sitio en https o localhost, permiso de ubicación concedido.;—;"1. Pulsar ""Usar mi ubicación (GPS)"".
+2. Continuar y guardar.";"1. Muestra ""Buscando señal GPS…"" y luego coloca el punto en la ubicación actual.
+2. La parcela queda registrada con esas coordenadas.";;No ejecutado;;;;
+TC-PAR-004;PAR · Registro de parcelas;HLTC-PAR-01;GPS sin conexión segura o denegado;HU-USR-01;Media;Negativa;cliente;Acceder por http://<IP-LAN>:5173 desde un teléfono.;—;"1. Pulsar ""Usar mi ubicación (GPS)"".
+2. En localhost, denegar el permiso de ubicación del navegador.";"1. Mensaje: ""El GPS del navegador necesita https o localhost. Escriba las coordenadas o toque el mapa.""
+2. Se muestra un mensaje de error y se puede continuar tocando el mapa.";;No ejecutado;;;;
+TC-PAR-005;PAR · Registro de parcelas;HLTC-PAR-02;Dibujar perímetro y superficie calculada;HU-USR-01;Alta;Funcional;cliente;—;Cuatro esquinas de ~100 m × 100 m (≈ 1 ha);"1. Elegir ""Dibujar el perímetro"" y tocar 4 esquinas en orden.
+2. Pulsar ""Deshacer el último punto"".
+3. Volver a marcarlo y continuar.
+4. Pulsar ""Borrar el dibujo"" en un nuevo registro.";"1. Se dibuja el polígono.
+2. Se quita el último vértice.
+3. En el paso 2 la superficie viene precargada con el área del perímetro (≈ 1 ha).
+4. Se eliminan todos los vértices.";;No ejecutado;;;;
+TC-PAR-006;PAR · Registro de parcelas;HLTC-PAR-02;Perímetro con menos de 3 o más de 60 puntos;HU-USR-01;Media;Límite;cliente;—;"Perímetro de 2 puntos; de 3; de 60; de 61 (API)";"1. Marcar 2 puntos e intentar continuar.
+2. POST /api/parcelas con perímetro de 2 y de 61 puntos.
+3. POST con perímetro de 3 y de 60 puntos válidos.
+4. POST con un vértice [95, 10].";"1. No permite continuar o muestra error.
+2. HTTP 400: ""El perímetro debe tener entre 3 y 60 puntos"".
+3. Se aceptan (HTTP 201).
+4. HTTP 400: ""El perímetro tiene un punto con coordenadas inválidas"".";;No ejecutado;;;;
+TC-PAR-007;PAR · Registro de parcelas;HLTC-PAR-02;Perímetro demasiado pequeño;HU-USR-01;Baja;Límite;cliente;—;Triángulo de ~5 m de lado;1. Dibujar un perímetro muy pequeño y guardar.;"1. Error: ""El perímetro dibujado es demasiado pequeño (menos de 100 m²)"".";;No ejecutado;;;;
+TC-PAR-008;PAR · Registro de parcelas;HLTC-PAR-02;Superficie escrita difiere del perímetro;HU-USR-01;Media;Funcional;cliente;Perímetro de ≈ 1 ha.;Superficie escrita 3 ha;"1. Reemplazar la superficie por 3 y continuar al resumen.
+2. Guardar de todas formas.";"1. Aviso: ""La superficie que escribió (3 ha) difiere bastante de la del perímetro dibujado (… ha). Revise cuál es la correcta.""
+2. La parcela se guarda (el aviso no bloquea).";;No ejecutado;;;;
+TC-PAR-009;PAR · Registro de parcelas;HLTC-PAR-03;Nombre obligatorio;HU-USR-01;Alta;Negativa;cliente;—;Nombre vacío o solo espacios;1. Intentar continuar o guardar sin nombre.;"1. Error: ""Póngale un nombre a la parcela"".";;No ejecutado;;;;
+TC-PAR-010;PAR · Registro de parcelas;HLTC-PAR-03;Coordenadas inválidas;HU-USR-01;Alta;Límite;cliente;—;(95, -200), (90, 180), (-90.0001, 0);"1. Escribir lat 95 y lon -200 e intentar continuar.
+2. Probar lat 90, lon 180 (límite).
+3. Probar lat -90.0001.";"1. Error: ""Coordenadas inválidas: la latitud va de -90 a 90 y la longitud de -180 a 180"".
+2. Se acepta (con aviso de fuera de zona).
+3. Error de coordenadas inválidas.";;No ejecutado;;;;
+TC-PAR-011;PAR · Registro de parcelas;HLTC-PAR-03;Límites de superficie;HU-USR-01;Media;Límite;cliente;Registro por punto.;0 · 0.01 · 5000 · 5000.01 · -1;"1. Probar superficie 0 y -1.
+2. Probar 0.01 y 5000.
+3. Probar 5000.01.";"1. Error: ""La superficie debe ser mayor que 0 y de hasta 5000 hectáreas"".
+2. Se aceptan.
+3. Error de superficie.";;No ejecutado;;;;
+TC-PAR-012;PAR · Registro de parcelas;HLTC-PAR-03;"Campos opcionales ""no disponible""";HU-USR-01;Media;Funcional;cliente;—;Solo nombre y punto;"1. Registrar sin superficie, cultivo, etapa ni riego.
+2. Abrir la ficha.";"1. Se guarda.
+2. Los campos vacíos se muestran como ""no disponible"".";;No ejecutado;;;;
+TC-PAR-013;PAR · Registro de parcelas;HLTC-PAR-03;Ubicación fuera de las zonas de Cochabamba;HU-USR-01;Media;Funcional;cliente;—;Lat 40.4168, Lon -3.7038;1. Registrar con esas coordenadas y llegar al resumen.;"1. Aviso: ""La ubicación está fuera de las zonas de Cochabamba que conoce Poseidon. Compruebe las coordenadas."" La zona es ""Otra zona""; se puede guardar.";;No ejecutado;;;;
+TC-PAR-014;PAR · Registro de parcelas;HLTC-PAR-03;Corregir desde el resumen conserva los datos;HU-USR-01;Media;Usabilidad;cliente;En el paso 3 con datos completos.;—;"1. Pulsar ""Corregir datos"", cambiar el nombre y volver al resumen.
+2. Pulsar ""Corregir ubicación"", mover el punto y continuar.";"1. Se mantienen los demás datos y el nombre nuevo.
+2. Los datos del paso 2 siguen cargados y el resumen muestra la nueva zona.";;No ejecutado;;;;
+TC-PAR-015;PAR · Registro de parcelas;HLTC-PAR-03;Datos opcionales con valores fuera del catálogo (API);HU-USR-01;Baja;Negativa;cliente;Token de cliente.;"cultivo_actual ""cafe"", etapa ""otra"", riego ""goteo""";1. POST /api/parcelas con cada valor inválido.;"1. HTTP 400: ""Cultivo no válido"", ""Etapa del cultivo no válido"", ""Disponibilidad de riego no válido"" respectivamente.";;No ejecutado;;;;
+TC-FIC-001;FIC · Ficha de parcela;HLTC-FIC-01;Secciones de la ficha de parcela;HU-USR-02;Alta;Funcional;cliente;Parcela registrada hace más de 5 minutos con conexión a internet.;"Parcela ""Chacra Tiquipaya""";"1. Abrir ""Ver la ficha"".";"1. Se ven: título con código PAR, ""Datos que dio el agricultor"", ""Pendiente y erosión"" (NASA SRTM), ""Historial de cosechas"", ""Verdor de la parcela (NDVI)"", ""Comparaciones de rotación"", ""Observaciones de campo"" y ""De dónde sale cada dato"".";;No ejecutado;;;;
+TC-FIC-002;FIC · Ficha de parcela;HLTC-FIC-01;Pendiente, riesgo de erosión y cultivos de cobertura;HU-USR-05;Alta;Funcional;cliente;Una parcela en terreno plano y otra en ladera, con elevación consultada.;Ubicaciones 8.3 (centro y ladera);"1. Abrir la ficha de la parcela plana.
+2. Abrir la ficha de la parcela en ladera.";"1. Muestra la pendiente en % y riesgo ""bajo"" (< 5 %), sin cultivos sugeridos.
+2. Riesgo ""medio"" (5-15 %) o ""alto"" (≥ 15 %), explicación en lenguaje sencillo y hasta 5 ""Cultivos que protegen la ladera"" (raíz profunda o que cubren el suelo).";;No ejecutado;;;;
+TC-FIC-003;FIC · Ficha de parcela;HLTC-FIC-01;Elevación no disponible;HU-USR-05;Media;Resiliencia;cliente;Backend con ELEVACION_URL vacío (o sin internet) y parcela nueva.;—;1. Abrir la ficha.;"1. La sección de pendiente indica ""La consulta de elevación está desactivada en el servidor."" (o ""Aún no se pudo consultar la elevación; se reintenta al abrir la parcela."").";;No ejecutado;;;;
+TC-FIC-004;FIC · Ficha de parcela;HLTC-FIC-02;Añadir campaña pasada;HU-USR-02;Media;Funcional;cliente;Ficha propia abierta.;"Año 2024, Papa, 120 qq/ha, nota ""buena campaña""";"1. Pulsar ""+ Añadir campaña pasada"", completar y ""Guardar campaña"".
+2. Añadir otra campaña del año 2022.";"1. La campaña aparece en la tabla del historial.
+2. Las campañas se ordenan del año más reciente al más antiguo.";;No ejecutado;;;;
+TC-FIC-005;FIC · Ficha de parcela;HLTC-FIC-02;Límites de año y rendimiento;HU-USR-02;Media;Límite;cliente;Año actual = 2026.;"Año 1989 · 1990 · 2027 · 2028; rendimiento 0 · 5000 · 5000.01 · vacío";"1. Guardar con año 1989 y con 2028.
+2. Guardar con año 1990 y con 2027 (año actual + 1).
+3. Guardar con rendimiento 0 y 5000.01.
+4. Guardar con rendimiento 5000 y con rendimiento vacío.";"1. Error ""Año de la campaña no válido"".
+2. Se aceptan.
+3. Error ""Rendimiento no válido (quintales por hectárea)"".
+4. Se aceptan (vacío = sin dato).";;No ejecutado;;;;
+TC-FIC-006;FIC · Ficha de parcela;HLTC-FIC-02;Quitar campaña y permisos sobre el historial;HU-USR-02;Media;Funcional;cliente, operativo;Campaña registrada.;—;"1. Como dueño, pulsar ""Quitar"" en una campaña.
+2. Como técnico asignado, abrir la misma ficha.";"1. La campaña desaparece.
+2. Ve el historial pero sin botones ""Quitar"" ni ""+ Añadir campaña pasada"".";;No ejecutado;;;;
+TC-FIC-007;FIC · Ficha de parcela;HLTC-FIC-03;NDVI en segundo plano;HU-USR-02;Media;Funcional;cliente;"Parcela recién registrada; internet disponible.";—;"1. Abrir la ficha inmediatamente después de registrar.
+2. Esperar (puede tardar minutos) sin recargar.
+3. Pulsar ""Buscar datos más recientes"".";"1. La sección NDVI indica que la consulta está en curso o que aún no hay datos; la ficha no se bloquea.
+2. La ficha se actualiza sola con la gráfica NDVI por año, en época húmeda y seca.
+3. Se encola la consulta sin error.";;No ejecutado;;;;
+TC-FIC-008;FIC · Ficha de parcela;HLTC-FIC-04;De dónde sale cada dato;HU-OPT-01;Media;Funcional;cliente;Ficha abierta.;—;"1. Revisar la sección ""De dónde sale cada dato"".";"1. Lista agricultor (ubicación, superficie…), NASA POWER, NASA SRTM, MODIS y GAMC con fecha y, si falta, su limitación (p. ej., ""Capas del GAMC no configuradas: la zona es el municipio más cercano (aproximado)."").";;No ejecutado;;;;
+TC-FIC-009;FIC · Ficha de parcela;HLTC-FIC-04;Corregir datos declarados;HU-USR-01;Alta;Funcional;cliente;Ficha propia abierta.;"Nombre ""Chacra Norte"", superficie 2, cultivo Haba, etapa Floración, riego Sin riego";"1. Pulsar ""Corregir estos datos"", cambiar los valores y ""Guardar cambios"".
+2. Verificar que no hay opción para cambiar la ubicación.
+3. Pulsar ""Corregir estos datos"" y luego ""Cancelar"".";"1. La ficha muestra los nuevos valores.
+2. La ubicación no es editable (para otro lugar se registra otra parcela).
+3. No se guarda ningún cambio.";;No ejecutado;;;;
+TC-FIC-010;FIC · Ficha de parcela;HLTC-FIC-04;Acceso a la ficha de otro agricultor (IDOR);HU-OPT-01;Alta;Seguridad;cliente, operativo;"Parcela P2 de agricultor2; id conocido.";"GET/PATCH /api/parcelas/<P2>; POST /api/parcelas/<P2>/ciclos";"1. Con el token de cliente@ llamar GET /api/parcelas/<P2>.
+2. Con el token de cliente@ llamar PATCH y POST ciclos sobre P2.
+3. Con el token de un técnico no asignado a P2 llamar GET.
+4. Con el token del administrador (ver_todas) llamar GET.";"1. HTTP 404 ""Parcela no encontrada"".
+2. HTTP 404.
+3. HTTP 404.
+4. HTTP 200 con la ficha.";;No ejecutado;;;;
+TC-ROT-001;ROT · Comparar rotaciones;HLTC-ROT-01;Comparar rotaciones de una parcela registrada;HU-USR-01;Alta;Funcional;cliente;"Parcela registrada; conexión con NASA POWER.";"Rotación Papa → Maíz; prioridades por defecto (agua 4, suelo 3, clima 2, ingreso 2, forraje 0)";"1. Ir a Mi finca > Comparar rotaciones; elegir la parcela en ""1 ¿Qué parcela?"".
+2. En ""2 ¿Qué siembra hoy?"" elegir Papa y Maíz; dejar prioridades; pulsar ""Comparar rotaciones"".
+3. Revisar el resultado.
+4. Revisar las tarjetas de cada estrategia.
+5. Revisar el gráfico de clima.
+6. Ir a ""Mis evaluaciones"".";"1. Se selecciona la parcela.
+2. El botón muestra ""Consultando datos…"".
+3. Tabla comparativa con 3 estrategias: ""Rotación actual"", ""Ajuste: cambia un cultivo"" y ""Cambio mayor"", cada una con puntaje 0-100.
+4. Cada una muestra por qué se sugiere, evidencia (riego mm, meses de suelo desnudo, familias), riesgos y ""lo que el análisis no sabe"".
+5. Muestra lluvia, evapotranspiración y temperatura mínima por mes con fuente NASA POWER.
+6. La evaluación aparece guardada con estado pendiente.";;No ejecutado;;;;
+TC-ROT-002;ROT · Comparar rotaciones;HLTC-ROT-01;Comparar desde un punto sin parcela registrada;HU-USR-01;Media;Funcional;cliente;—;"Lat -17.3895, Lon -66.1568, nombre vacío; rotación Maíz → Haba";"1. Elegir la opción de ubicación por punto, escribir coordenadas sin nombre y comparar.
+2. Ir a Mis parcelas.";"1. Se muestran las 3 estrategias.
+2. Se creó la parcela ""Parcela sin nombre"" en esas coordenadas.";;No ejecutado;;;;
+TC-ROT-003;ROT · Comparar rotaciones;HLTC-ROT-02;Reglas de la rotación en la interfaz;HU-USR-01;Alta;Límite;cliente;Comparador abierto.;—;"1. Con 2 cultivos, observar los botones.
+2. Pulsar ""+ Añadir cultivo"" hasta tener 4.
+3. Abrir el desplegable del cultivo 2.
+4. Quitar un cultivo con ""×"".";"1. No aparece el botón ""×"" para quitar (mínimo 2).
+2. Al llegar a 4 desaparece ""+ Añadir cultivo"" (máximo 4).
+3. No ofrece los cultivos ya elegidos en otras posiciones (cultivos distintos).
+4. Quedan 3 y vuelve a aparecer ""+ Añadir cultivo"".";;No ejecutado;;;;
+TC-ROT-004;ROT · Comparar rotaciones;HLTC-ROT-02;Reglas de la rotación en la API;HU-USR-01;Alta;Negativa;cliente;Token de cliente y parcela propia.;"rotacion: [""papa""] · [""papa"",""maiz"",""haba"",""trigo"",""quinua""] · [""papa"",""papa""] · [""papa"",""cafe""]";"1. POST /api/evaluar con 1 cultivo, con 5 y con repetidos.
+2. POST con un cultivo inexistente.
+3. POST con parcela_id de otro agricultor.
+4. POST sin parcela_id y con lat 95.";"1. HTTP 400: ""La rotación debe tener de 2 a 4 cultivos distintos"".
+2. HTTP 400: ""Cultivo desconocido: cafe"".
+3. HTTP 404: ""Parcela no encontrada"".
+4. HTTP 400: ""Coordenadas inválidas"".";;No ejecutado;;;;
+TC-ROT-005;ROT · Comparar rotaciones;HLTC-ROT-03;Prioridades cambian el resultado;HU-USR-01;Media;Funcional;cliente;Misma parcela y rotación Papa → Maíz.;Caso A: agua 5, resto 0 · Caso B: ingreso 5, resto 0 · Caso C: todo 0;"1. Comparar con el caso A.
+2. Comparar con el caso B.
+3. Comparar con el caso C.
+4. Verificar que cada deslizador va de 0 a 5 y muestra el valor elegido.";"1. Las estrategias sugeridas priorizan menor riego (mm).
+2. El puntaje y/o las estrategias sugeridas cambian respecto del caso A (priorizan valor de mercado).
+3. Se calcula sin error (promedio simple de los criterios).
+4. Correcto.";;No ejecutado;;;;
+TC-ROT-006;ROT · Comparar rotaciones;HLTC-ROT-03;Prioridades fuera de rango se acotan (API);HU-USR-01;Baja;Límite;cliente;Token de cliente.;"prioridades: { agua: 9, suelo: -3, clima: ""x"" }";1. POST /api/evaluar con esas prioridades y revisar la evaluación guardada.;"1. HTTP 200; las prioridades guardadas son agua 5, suelo 0, clima 0.";;No ejecutado;;;;
+TC-ROT-007;ROT · Comparar rotaciones;HLTC-ROT-04;Parcela en ladera;HU-USR-05;Alta;Funcional;cliente;Parcela con riesgo de erosión medio o alto (TC-FIC-002).;Rotación Papa → Cebolla;"1. Comparar rotaciones para esa parcela.
+2. Revisar riesgos y porqués.";"1. Aviso: ""Su parcela está en ladera (pendiente de X %): la comparación da más valor a las raíces profundas y al suelo cubierto.""
+2. Las estrategias mencionan la protección de la ladera; la actual advierte del suelo desnudo si es ≥ 4 meses.";;No ejecutado;;;;
+TC-ROT-008;ROT · Comparar rotaciones;HLTC-ROT-04;Plagas activas cercanas castigan la familia atacada;HU-OPT-02;Alta;Funcional;operativo + cliente;Parcela del cliente en P. El técnico registra a < 5 km de P una incidencia ACTIVA de tipo plaga, severidad alta, cultivo Papa.;"Agente ""Gorgojo de los Andes""; rotación Papa → Maíz";"1. Como cliente, comparar Papa → Maíz.
+2. Revisar las alternativas.
+3. Como técnico, marcar la incidencia como controlada y volver a comparar.
+4. Registrar una incidencia igual a > 5 km y comparar.";"1. La estrategia actual lista el riesgo ""1 reporte(s) activo(s) de Gorgojo de los Andes a X km: ataca a las Solanáceas…"".
+2. Alguna alternativa que evita Solanáceas explica: ""Corta el ciclo de plagas reportadas por técnicos cerca de su parcela…"".
+3. El riesgo por plaga ya no aparece.
+4. No influye en la comparación.";;No ejecutado;;;;
+TC-ROT-009;ROT · Comparar rotaciones;HLTC-ROT-04;Sin conexión con NASA POWER: clima de demostración;HU-USR-01;Alta;Resiliencia;cliente;Backend sin salida a internet (o POWER bloqueado en firewall).;—;1. Comparar rotaciones.;"1. Se muestran las estrategias y el aviso ""Sin conexión con NASA POWER: se usa un clima de demostración para Cochabamba, no datos de NASA.""";;No ejecutado;;;;
+TC-ROT-010;ROT · Comparar rotaciones;HLTC-ROT-05;Marcar la estrategia que aplicará;HU-MON-03;Media;Funcional;cliente;Comparación realizada.;"Estrategia ""Ajuste""";"1. En la tarjeta ""Ajuste"" pulsar ""Voy a aplicar esta rotación"".
+2. Pulsar ""Voy a aplicar esta rotación"" en ""Cambio mayor"".
+3. Pulsar ""Quitar mi elección"".
+4. PATCH /api/evaluaciones/:id/adopcion { ""estrategia"": ""otra"" }.";"1. La tarjeta muestra ""Usted eligió aplicar esta rotación."" y el botón cambia a ""Quitar mi elección"".
+2. La elección pasa a ""Cambio mayor"" (solo una a la vez).
+3. Ninguna estrategia queda elegida.
+4. HTTP 400: ""Estrategia no válida"".";;No ejecutado;;;;
+TC-EVA-001;EVA · Mis evaluaciones;HLTC-EVA-01;Listado de mis evaluaciones;HU-OPT-04;Alta;Funcional;cliente;Al menos 2 evaluaciones, una revisada por el técnico.;—;"1. Abrir Mi finca > Mis evaluaciones.
+2. Abrir la evaluación revisada.";"1. Lista las evaluaciones propias con fecha, parcela, rotación actual, mejor estrategia y estado (pendiente/revisada).
+2. Muestra la nota técnica del técnico y su nombre.";;No ejecutado;;;;
+TC-EVA-002;EVA · Mis evaluaciones;HLTC-EVA-01;Observaciones locales del técnico visibles para el agricultor;HU-OPT-04;Alta;Funcional;cliente;"El técnico registró una observación local en la estrategia ""Ajuste"" (TC-OPT-005).";—;1. Abrir esa evaluación.;"1. En la tabla comparativa, bajo ""Ajuste"", aparece la observación local con disponibilidad de semilla, técnico y fecha.";;No ejecutado;;;;
+TC-EVA-003;EVA · Mis evaluaciones;HLTC-EVA-01;Evaluación de otro agricultor (IDOR);HU-OPT-04;Alta;Seguridad;cliente;Evaluación E2 de agricultor2.;GET /api/evaluaciones/<E2>;"1. Llamar el endpoint con el token de cliente@.
+2. Llamar GET /api/evaluaciones con el token de cliente@.";"1. HTTP 404 ""Evaluación no encontrada"".
+2. Solo devuelve evaluaciones propias.";;No ejecutado;;;;
+TC-LIG-001;LIG · Modo de bajo consumo;HLTC-LIG-01;Activar el modo de bajo consumo;HU-USR-06;Alta;Funcional;cliente;Parcela con evaluación.;—;"1. Pulsar ""Modo bajo consumo"" en la cabecera.
+2. Revisar Mi finca.
+3. Recargar la página.
+4. Desactivarlo.";"1. El botón cambia a ""Modo bajo consumo: activado"" (aria-pressed=true) y la tipografía pasa a la del sistema.
+2. Aparece la pestaña ""Resumen rápido"" con cada parcela, su última comparación y la tabla de 3 estrategias; no hay mapas ni tarjetas largas.
+3. El modo sigue activado (preferencia guardada).
+4. Vuelven los mapas y las tarjetas.";;No ejecutado;;;;
+TC-LIG-002;LIG · Modo de bajo consumo;HLTC-LIG-01;Activación automática con ahorro de datos o 2G;HU-USR-06;Media;Funcional;cliente;"localStorage sin la clave ""poseidon_ligero""; Chrome con ""Ahorro de datos"" o red emulada de tipo 2G.";—;1. Abrir la aplicación e ingresar.;1. El modo de bajo consumo aparece activado sin que la persona lo elija.;;No ejecutado;;;;
+TC-LIG-003;LIG · Modo de bajo consumo;HLTC-LIG-01;Sin descargas pesadas en modo bajo consumo;HU-USR-06;Alta;Rendimiento;cliente;"Modo activado; DevTools > Network con caché deshabilitada.";—;1. Recargar y navegar por Mi finca.;1. No se descargan Leaflet, mosaicos de mapa (tiles) ni tipografías web (Nunito).;;No ejecutado;;;;
+TC-LIG-004;LIG · Modo de bajo consumo;HLTC-LIG-01;Comparar y adoptar en modo bajo consumo;HU-USR-06;Media;Funcional;cliente;Modo activado.;Rotación Papa → Maíz;"1. Desde ""Resumen rápido"", ir a comparar una parcela.
+2. Comparar.
+3. Adoptar una estrategia desde la tabla.";"1. Se abre el comparador con la parcela preseleccionada.
+2. Solo se muestra la tabla comparativa (sin gráfico de clima ni tarjetas).
+3. Queda marcada como adoptada.";;No ejecutado;;;;
+TC-LIG-005;LIG · Modo de bajo consumo;HLTC-LIG-01;Service worker guarda la aplicación;HU-USR-06;Media;Rendimiento;cliente;Compilación de producción (npm run build && npm run preview) en localhost.;—;"1. Abrir la aplicación y verificar DevTools > Application > Service Workers.
+2. Activar ""Offline"" en DevTools y recargar.";"1. Hay un service worker activo (sw.js).
+2. La interfaz (cáscara de la aplicación) se carga desde la caché.";;No ejecutado;;;;
+TC-OPT-001;OPT · Asistencia técnica;HLTC-OPT-01;El técnico ve solo sus parcelas asignadas;HU-OPT-01;Alta;Funcional;operativo;"Rol operativo sin ver_todas; parcelas asignadas a operativo@ y a tecnico2@.";—;"1. Ingresar como operativo@ > Asistencia técnica > Mis parcelas.
+2. Abrir una parcela.";"1. Solo aparecen sus parcelas asignadas con su ficha agroclimática.
+2. Muestra la ficha y el botón ""Registrar una visita a esta parcela"".";;No ejecutado;;;;
+TC-OPT-002;OPT · Asistencia técnica;HLTC-OPT-01;Parcela no asignada no es accesible;HU-OPT-01;Alta;Seguridad;operativo;Parcela P asignada a tecnico2.;"GET /api/parcelas/<P>; GET /api/parcelas?alcance=todas";"1. Con el token de operativo@ pedir la ficha de P.
+2. Pedir GET /api/parcelas?alcance=todas.";"1. HTTP 404.
+2. Devuelve solo sus parcelas propias (sin ver_todas no se amplía el alcance).";;No ejecutado;;;;
+TC-OPT-003;OPT · Asistencia técnica;HLTC-OPT-02;Revisar una evaluación con nota técnica;HU-OPT-01;Alta;Funcional;operativo + cliente;Evaluación pendiente de una parcela asignada.;"Nota ""Recomiendo probar haba en media parcela esta campaña.""";"1. Abrir la pestaña ""Revisión (n)"".
+2. Abrir la evaluación, escribir la nota en ""Nota técnica para el agricultor"" y guardar.
+3. Intentar guardar con la nota vacía.
+4. Como cliente, abrir la evaluación.";"1. El contador n coincide con las evaluaciones pendientes.
+2. La evaluación pasa a ""revisada"" y el contador baja en 1.
+3. Error ""Escriba una nota técnica"".
+4. Ve la nota del técnico.";;No ejecutado;;;;
+TC-OPT-004;OPT · Asistencia técnica;HLTC-OPT-02;Filtrar evaluaciones por estado;HU-OPT-01;Baja;Funcional;operativo;Evaluaciones pendientes y revisadas.;—;"1. Usar el selector ""Estado de las evaluaciones"".";1. La lista muestra solo las del estado elegido.;;No ejecutado;;;;
+TC-OPT-005;OPT · Asistencia técnica;HLTC-OPT-03;Observación local por estrategia;HU-OPT-04;Media;Funcional;operativo;Evaluación de una parcela asignada abierta.;"Estrategia Ajuste, semillas ""Semilla escasa o cara"", observación ""Tarwi escaso en la feria local""";"1. En la tabla comparativa escribir la observación para ""Ajuste"" y guardar.
+2. Intentar guardar una observación de 4 caracteres.
+3. POST /api/evaluaciones/:id/validaciones con semillas ""mucha"".";"1. La observación aparece en la columna de esa estrategia.
+2. Error ""Escriba la observación local"".
+3. HTTP 400 ""Disponibilidad de semillas no válida"".";;No ejecutado;;;;
+TC-OPT-006;OPT · Asistencia técnica;HLTC-OPT-03;Historial de validaciones por zona;HU-OPT-04;Media;Funcional;operativo;"Varias validaciones en zonas distintas, una con ""No se consigue en la zona"".";—;"1. Abrir la pestaña ""Validaciones"".
+2. Usar el filtro ""Zona o distrito"".";"1. Lista las validaciones con fecha, rotación, semillas, observación, parcela, agricultor y zona.
+2. Muestra el total por zona y cuántas sin semilla.";;No ejecutado;;;;
+TC-OPT-007;OPT · Asistencia técnica;HLTC-OPT-04;Registrar una visita técnica;HU-OPT-03;Media;Funcional;operativo;Parcela asignada.;"Fecha hoy; observaciones ""Se revisó el riego y se recomendó cobertura""";"1. Pulsar ""Registrar una visita a esta parcela"" y completar ""Registrar visita"".
+2. Abrir la ficha de la parcela como cliente.";"1. La visita se guarda; el agricultor visitado es el dueño de la parcela.
+2. En ""Visitas técnicas"" aparece la visita con fecha, técnico y observaciones.";;No ejecutado;;;;
+TC-OPT-008;OPT · Asistencia técnica;HLTC-OPT-04;Validaciones de la visita;HU-OPT-03;Media;Límite;operativo;Hoy = 2026-11-14.;Fecha 2026-11-16 · 2026-02-30 · observación de 9 caracteres;"1. Registrar con fecha pasado mañana (2026-11-16).
+2. Registrar con fecha ""2026-02-30"" vía API.
+3. Registrar con 9 caracteres de observación.
+4. Registrar con 10 caracteres.";"1. Error ""La fecha de la visita no puede ser futura"".
+2. HTTP 400 ""Fecha de la visita no válida"".
+3. Error ""Describa el asesoramiento en al menos 10 caracteres"".
+4. Se acepta.";;No ejecutado;;;;
+TC-OPT-009;OPT · Asistencia técnica;HLTC-OPT-04;Resumen de actividades por período;HU-OPT-03;Media;Funcional;operativo;Visitas en octubre y noviembre 2026.;Desde 2026-11-01 hasta 2026-11-30;"1. Abrir la pestaña ""Visitas"" y filtrar el período.
+2. GET /api/visitas?desde=2026-13-01.";"1. ""Resumen de actividades de campo"" muestra total, agricultores y parcelas distintas, y conteo por mes, zona y técnico, solo de noviembre.
+2. HTTP 400 ""Fechas no válidas (AAAA-MM-DD)"".";;No ejecutado;;;;
+TC-OPT-010;OPT · Asistencia técnica;HLTC-OPT-04;Exportar visitas a CSV;HU-OPT-03;Media;Funcional;operativo;Período filtrado de TC-OPT-009.;—;"1. Pulsar ""Exportar resumen (CSV para Excel)"".
+2. Abrir el archivo en Excel.";"1. Descarga ""visitas-2026-11-01-a-2026-11-30.csv"".
+2. Columnas: Fecha, Técnico, Agricultor visitado, Parcela, Zona o distrito, Observaciones de asesoramiento; tildes correctas; separador "";""; solo las visitas del período.";;No ejecutado;;;;
+TC-MON-001;MON · Monitoreo regional;HLTC-MON-01;Panorama regional;HU-MON-01;Alta;Funcional;monitoreo;≥ 3 agricultores con parcelas evaluadas en una misma zona.;—;"1. Ingresar como monitoreo > Panorama.
+2. Revisar ""Qué significa cada indicador"".";"1. Muestra totales, ""Mapa regional"", ""Alertas regionales"" e ""Indicadores agroclimáticos por zona"" (riego medio, índice de agua, heladas, laderas, plagas activas).
+2. Cada indicador indica fuente, período, escala y tipo (observado, estimado, declarado o simulado).";;No ejecutado;;;;
+TC-MON-002;MON · Monitoreo regional;HLTC-MON-01;Zonas con menos de 3 productores no se publican;HU-MON-01;Alta;Seguridad;monitoreo;"Zona A con 3 productores; zona B con 1; zona C con 1 (B+C < 3).";—;"1. Revisar la tabla por zona.
+2. Buscar B y C.
+3. Agregar un tercer productor entre B y C y recargar.";"1. La zona A aparece con sus valores.
+2. No aparecen por separado: se juntan en ""Zonas con pocos registros"" y, como siguen siendo menos de 3, sus valores se muestran suprimidos (""Menos de 3 productores: no se publican valores"").
+3. El grupo ""Zonas con pocos registros"" pasa a mostrar valores.";;No ejecutado;;;;
+TC-MON-003;MON · Monitoreo regional;HLTC-MON-01;Detalle individual solo con ver_todas;HU-MON-01;Alta;Seguridad;monitoreo, administrador;"Permisos por defecto; incidencias activas registradas.";GET /api/monitoreo;"1. Como monitoreo, revisar las pestañas.
+2. Con el token de monitoreo llamar GET /api/monitoreo.
+3. Como administrador (ver_todas) abrir Monitoreo.";"1. No existe ""Detalle por parcela"".
+2. ""detalle"": false, ""evaluaciones"": [] y las coordenadas de incidencias aproximadas (~2 km).
+3. Aparece ""Detalle por parcela"" con ""Mapa de parcelas evaluadas"" y la tabla ""Actividad""; las incidencias tienen coordenadas exactas.";;No ejecutado;;;;
+TC-MON-004;MON · Monitoreo regional;HLTC-MON-01;Capas del GAMC no configuradas;HU-MON-01;Baja;Resiliencia;monitoreo;"GAMC_WMS_URL vacío; sin Database/distritos.geojson.";—;1. Abrir el Panorama.;1. Se avisa que las capas del GAMC no están configuradas y el tablero funciona con normalidad (zonas por municipio más cercano).;;No ejecutado;;;;
+TC-MON-005;MON · Monitoreo regional;HLTC-MON-02;Simular escenario de agua;HU-MON-02;Media;Funcional;monitoreo;—;Lluvia -30 %, temperatura +2 °C;"1. Abrir ""Escenarios de agua"".
+2. Mover los controles a -30 % y +2 °C.
+3. Verificar el aviso de fuente.
+4. Pulsar ""Volver al clima actual"".";"1. Controles ""Cambio de lluvia en porcentaje"" (-60 a +20) y ""Aumento de temperatura en grados"" (0 a +5) en 0.
+2. Al moverlos se recalcula ""Riego adicional respecto de hoy"", el ""Mapa de calor por zona"" y la tabla ""Impacto por zona"" con nivel (bajo/moderado/alto/crítico).
+3. Indica que es una simulación, no una proyección climática.
+4. Los controles vuelven a 0 y el riego adicional es 0 %.";;No ejecutado;;;;
+TC-MON-006;MON · Monitoreo regional;HLTC-MON-02;Valores de escenario fuera de rango (API);HU-MON-02;Baja;Límite;monitoreo;—;GET /api/monitoreo/escenario?lluvia=-100&temp=9 · ?lluvia=abc;"1. Llamar con lluvia -100 y temp 9.
+2. Llamar con lluvia ""abc"".";"1. La respuesta muestra ""cambio"": { lluviaPct: -60, tempC: 5 } (acotado a los límites).
+2. Se toma 0 sin error.";;No ejecutado;;;;
+TC-MON-007;MON · Monitoreo regional;HLTC-MON-03;Adopción por zona;HU-MON-03;Media;Funcional;cliente ×3 + monitoreo;"3 agricultores en la zona A con evaluación; 2 marcan una estrategia recomendada.";—;"1. Como monitoreo, abrir ""Adopción"".";"1. ""Adopción de rotaciones recomendadas por zona"" muestra ≈ 67 % para la zona A, con ahorro de riego estimado y NDVI medio; ""Adopción regional"" refleja el total.";;No ejecutado;;;;
+TC-MON-008;MON · Monitoreo regional;HLTC-MON-04;Suelo desnudo por año y época;HU-MON-04;Media;Funcional;monitoreo;Parcelas con NDVI guardado.;"Época seca y húmeda; dos años";"1. Abrir ""Suelo desnudo"" y elegir año y ""Época del año"".
+2. Cambiar la época.";"1. ""Áreas sin cobertura vegetal activa"" muestra el % de parcelas con NDVI < 0,2 para ese período.
+2. Los valores se recalculan.";;No ejecutado;;;;
+TC-MON-009;MON · Monitoreo regional;HLTC-MON-04;Exportar zonas prioritarias (CSV);HU-MON-04;Media;Funcional;monitoreo;Período elegido.;—;"1. Pulsar ""Exportar listado de zonas prioritarias (CSV)"".
+2. Abrir en Excel.";"1. Descarga ""distritos-suelo-desnudo-<año>-<época>.csv"".
+2. Columnas: Prioridad, Zona o distrito, % de parcelas con suelo desnudo (NDVI < 0.2), NDVI medio, Parcelas con dato, Superficie registrada (ha), Período.";;No ejecutado;;;;
+TC-MON-010;MON · Monitoreo regional;HLTC-MON-01;Alertas regionales;HU-MON-01;Media;Funcional;monitoreo, administrador;"Incidencia activa de severidad alta; evaluación con déficit > 400 mm.";—;"1. Como monitoreo, revisar ""Alertas regionales"".
+2. Como administrador, revisar.";"1. Aparece la alerta de plaga ""Severidad alta en <zona>…""; no aparecen alertas de agua/helada por parcela.
+2. Además aparecen ""Déficit de agua alto…"" y ""<cultivo> expuesto a helada en…"" por parcela.";;No ejecutado;;;;
+TC-ALE-001;ALE · Alertas climáticas;HLTC-ALE-01;Guardar preferencias de alertas;HU-USR-03;Media;Funcional;cliente;—;Helada sí, sequía no, web sí, SMS no;"1. Abrir Alertas; en ""Qué alertas recibir"" y ""Cómo recibirlas"" elegir los valores; ""Guardar preferencias"".
+2. Recargar la página.";"1. Se guardan sin error.
+2. Se mantienen las preferencias guardadas.";;No ejecutado;;;;
+TC-ALE-002;ALE · Alertas climáticas;HLTC-ALE-01;SMS exige teléfono válido;HU-USR-03;Media;Negativa;cliente;—;"Sin teléfono · ""70000000"" · ""+59170000000""";"1. Activar SMS sin teléfono y guardar.
+2. Escribir ""70000000"".
+3. Escribir ""+59170000000"".";"1. Error ""Para recibir SMS indique su número de teléfono"".
+2. Error ""Escriba el teléfono con código de país, por ejemplo +59170000000"".
+3. Se guarda.";;No ejecutado;;;;
+TC-ALE-003;ALE · Alertas climáticas;HLTC-ALE-02;Activar notificaciones en este dispositivo;HU-USR-03;Media;Funcional;cliente;"Chrome en localhost; permiso de notificaciones sin decidir.";—;"1. En ""Este dispositivo"" pulsar activar.
+2. Pulsar desactivar.
+3. Repetir rechazando el permiso del navegador.";"1. El navegador pide permiso; al aceptar, el dispositivo queda registrado (contador de dispositivos +1).
+2. Se elimina la suscripción.
+3. Mensaje ""El navegador no dio permiso para notificaciones. Actívelo en la configuración del sitio.""; no se registra.";;No ejecutado;;;;
+TC-ALE-004;ALE · Alertas climáticas;HLTC-ALE-02;Notificaciones sin conexión segura;HU-USR-03;Baja;Negativa;cliente;Acceso por http://<IP-LAN>:5173.;—;1. Abrir Alertas.;"1. Aviso: ""Las notificaciones web necesitan una conexión segura (https o localhost). Desde una dirección de la red local no se pueden activar.""";;No ejecutado;;;;
+TC-ALE-005;ALE · Alertas climáticas;HLTC-ALE-03;Enviar alerta de prueba;HU-USR-03;Media;Funcional;cliente;"Web activado y dispositivo suscrito; SMS activado con teléfono; sin TWILIO_* en .env.";—;"1. Pulsar el botón de alerta de prueba.
+2. Revisar la consola del backend.
+3. Revisar ""Alertas recibidas"".";"1. Llega una notificación ""Alerta de prueba"" al dispositivo.
+2. El SMS aparece simulado en la consola.
+3. Aparece la alerta de prueba con sus canales.";;No ejecutado;;;;
+TC-ALE-006;ALE · Alertas climáticas;HLTC-ALE-03;Revisar parcelas ahora con límite de 1 por minuto;HU-USR-03;Media;Límite;cliente;Parcelas registradas.;—;"1. En ""Vigilancia de sus parcelas"" pulsar revisar.
+2. Pulsar de nuevo antes de 60 s.
+3. Esperar 60 s y repetir.";"1. Se ejecuta la revisión y muestra el resultado.
+2. Error 429 ""Espere un minuto antes de volver a revisar"".
+3. Se ejecuta.";;No ejecutado;;;;
+TC-ALE-007;ALE · Alertas climáticas;HLTC-ALE-03;Alerta de helada forzada sin duplicados;HU-USR-03;Media;Funcional;cliente;".env con ALERTA_HELADA_C=40 (toda mínima dispara la helada); backend reiniciado; internet disponible.";—;"1. Pulsar revisar parcelas.
+2. Esperar 1 min y revisar otra vez.
+3. Restaurar ALERTA_HELADA_C=0.";"1. Se genera una alerta de helada y se entrega por los canales elegidos.
+2. No se repite la alerta de la misma helada del mismo día.
+3. —";;No ejecutado;;;;
+TC-ALE-008;ALE · Alertas climáticas;HLTC-ALE-01;Roles sin permiso de alertas;HU-USR-03;Baja;Seguridad;comprador, administrador;Permisos por defecto.;GET /api/alertas;"1. Ingresar como comprador y como administrador; llamar el endpoint.";"1. No ven ""Alertas"" en el menú; la API responde 403.";;No ejecutado;;;;
+TC-VEN-001;VEN · Mis ventas;HLTC-VEN-01;Publicar cosecha;HU-CLI-02;Alta;Funcional;cliente;Parcela con evaluación (rotación Papa → Haba).;"Cultivo Haba, 20 qq, disponible desde 2026-12, nota ""Entrega en la comunidad""";"1. Abrir Mis ventas > Mi oferta; completar ""Publicar cosecha"".
+2. Publicar.
+3. Como comprador, abrir Oferta sostenible.";"1. El desplegable de cultivo solo ofrece los cultivos de la rotación de esa parcela.
+2. La oferta aparece en la lista como activa.
+3. La oferta es visible.";;No ejecutado;;;;
+TC-VEN-002;VEN · Mis ventas;HLTC-VEN-01;Sin parcelas evaluadas no se puede ofertar;HU-CLI-02;Media;Funcional;cliente;agricultor2 sin evaluaciones.;—;1. Abrir Mis ventas.;"1. Mensaje: ""Para ofertar su cosecha, primero compare rotaciones en “Mi finca”…""";;No ejecutado;;;;
+TC-VEN-003;VEN · Mis ventas;HLTC-VEN-01;Validaciones de la oferta;HU-CLI-02;Alta;Límite;cliente;"Token de cliente; evaluación propia.";"cantidad 0 · 0.01 · 10000000 · 10000000.01; unidad ""lb""; mes ""2026-13""; cultivo ""quinua"" fuera de la rotación; evaluacion_id ajena";"1. Publicar con cantidad 0 y con 10000000.01.
+2. Publicar con 0.01 y con 10000000.
+3. Publicar con unidad ""lb"".
+4. Publicar con mes ""2026-13"".
+5. Publicar un cultivo fuera de la rotación.
+6. Publicar con la evaluación de otro agricultor.";"1. Error ""Indique una cantidad válida"".
+2. Se aceptan.
+3. HTTP 400 ""Unidad no válida"".
+4. HTTP 400 ""Indique el mes desde el que estará disponible"".
+5. HTTP 400 ""El cultivo debe ser parte de la rotación de esa parcela"".
+6. HTTP 404 ""Parcela no encontrada"".";;No ejecutado;;;;
+TC-VEN-004;VEN · Mis ventas;HLTC-VEN-01;Pausar y reactivar oferta;HU-CLI-02;Alta;Funcional;cliente + comprador;Oferta activa.;—;"1. Pausar la oferta.
+2. Como comprador, buscarla.
+3. Reactivarla.";"1. Queda pausada.
+2. No aparece.
+3. Vuelve a aparecer para el comprador.";;No ejecutado;;;;
+TC-VEN-005;VEN · Mis ventas;HLTC-VEN-01;Máximo 30 ofertas activas;HU-CLI-02;Baja;Límite;cliente;30 ofertas activas (crear por API).;—;1. Publicar la oferta 31.;"1. HTTP 400 ""Tiene demasiadas ofertas activas; pause alguna antes de publicar otra"".";;No ejecutado;;;;
+TC-VEN-006;VEN · Mis ventas;HLTC-VEN-02;Aceptar solicitud compartiendo teléfono;HU-CLI-03;Alta;Funcional;cliente + comprador;Solicitud pendiente del comprador (TC-COM-009).;"Respuesta ""Puedo entregar en la feria del sábado."", teléfono +59170000000";"1. Abrir ""Solicitudes recibidas (n)"".
+2. Aceptarla con respuesta y teléfono.
+3. Como comprador, abrir ""Mis solicitudes"".";"1. La solicitud muestra comprador, cultivo, cantidad y mensaje; el contador n coincide.
+2. Estado ""aceptada""; se muestra el correo del comprador.
+3. Estado aceptada; ve nombre completo del productor, su correo y el teléfono compartido.";;No ejecutado;;;;
+TC-VEN-007;VEN · Mis ventas;HLTC-VEN-02;Rechazar solicitud;HU-CLI-03;Alta;Funcional;cliente + comprador;Otra solicitud pendiente.;—;"1. Rechazar la solicitud.
+2. Como comprador, revisarla.";"1. Estado ""rechazada""; no se muestran datos de contacto.
+2. Estado rechazada; contacto no visible; nombre del productor abreviado.";;No ejecutado;;;;
+TC-VEN-008;VEN · Mis ventas;HLTC-VEN-02;Responder dos veces o con datos inválidos;HU-CLI-03;Media;Negativa;cliente;"Solicitud ya aceptada; otra pendiente.";PATCH /api/solicitudes/:id/respuesta;"1. Responder otra vez la solicitud aceptada.
+2. Aceptar la pendiente con teléfono ""123"".
+3. Enviar estado ""quizas"".
+4. Responder una solicitud de otro productor.";"1. HTTP 409 ""Esta solicitud ya fue respondida o retirada"".
+2. HTTP 400 de formato de teléfono.
+3. HTTP 400 ""Respuesta no válida"".
+4. HTTP 404 ""Solicitud no encontrada"".";;No ejecutado;;;;
+TC-VEN-009;VEN · Mis ventas;HLTC-VEN-02;Aviso web de nueva solicitud;HU-CLI-03;Baja;Funcional;cliente + comprador;Cliente con notificaciones web activadas en su dispositivo.;—;"1. Como comprador, enviar una solicitud de compra.
+2. Como cliente, aceptarla.";"1. El cliente recibe la notificación ""Nueva solicitud de compra"" con nombre, cultivo y cantidad.
+2. El comprador (si tiene notificaciones activas) recibe ""Solicitud aceptada"".";;No ejecutado;;;;
+TC-COM-001;COM · Oferta sostenible (comprador);HLTC-COM-01;Listado de oferta disponible;HU-CLI-02;Alta;Funcional;comprador;≥ 3 ofertas activas de distintas rotaciones.;—;"1. Abrir Oferta sostenible > Oferta disponible.
+2. Revisar el orden.";"1. Cada oferta muestra cultivo, cantidad, unidad, mes, zona, rotación, prácticas, indicador de agua (0-100, nivel y riego mm, % que cubre la lluvia), verificada y sello si corresponde.
+2. Ordenadas por índice de agua de mayor a menor.";;No ejecutado;;;;
+TC-COM-002;COM · Oferta sostenible (comprador);HLTC-COM-01;Filtro por cultivo;HU-CLI-02;Alta;Funcional;comprador;Ofertas de Haba y Papa.;Cultivo Haba;"1. En ""Filtrar oferta"" > Cultivo elegir Haba.";"1. Solo se muestran ofertas de Haba; el contador de cada cultivo coincide con la cantidad de ofertas.";;No ejecutado;;;;
+TC-COM-003;COM · Oferta sostenible (comprador);HLTC-COM-01;Filtro por prácticas (todas deben cumplirse);HU-CLI-02;Alta;Funcional;comprador;"Una oferta con leguminosa y raíz profunda; otra solo con leguminosa.";Prácticas: leguminosa + raíz profunda;"1. Marcar solo ""leguminosa"".
+2. Marcar también ""raíz profunda"".";"1. Aparecen ambas ofertas.
+2. Solo queda la oferta que cumple ambas.";;No ejecutado;;;;
+TC-COM-004;COM · Oferta sostenible (comprador);HLTC-COM-01;"Filtro ""Verificada""";HU-CLI-02;Media;Funcional;comprador;Una oferta cuya evaluación fue revisada por un técnico y otra no.;—;"1. Activar ""Verificada"".";"1. Solo aparece la oferta revisada. El término ""Verificada"" (glosario) aclara que no es una certificación orgánica ni oficial.";;No ejecutado;;;;
+TC-COM-005;COM · Oferta sostenible (comprador);HLTC-COM-01;Filtro de uso eficiente del agua;HU-CLI-02;Media;Límite;comprador;Ofertas con índice ≥ 70, entre 40 y 69 y < 40.;agua=alta · agua=media;"1. Elegir ""alta"".
+2. Elegir ""media"".";"1. Solo ofertas con índice ≥ 70.
+2. Ofertas con índice ≥ 40 (media y alta).";;No ejecutado;;;;
+TC-COM-006;COM · Oferta sostenible (comprador);HLTC-COM-01;Filtro por zona y sello hídrico;HU-CLI-04;Media;Funcional;comprador;"Ofertas en dos zonas; una con sello (≥ 15 % menos riego que papa → maíz).";"Zona Tiquipaya; sello";"1. Elegir la zona Tiquipaya.
+2. Quitar la zona y activar el sello.
+3. Combinar varios filtros y luego limpiarlos.";"1. Solo ofertas de Tiquipaya.
+2. Solo ofertas con el sello ""Gestión Hídrica Sostenible"", que muestran su % de ahorro.
+3. El contador de filtros activos se actualiza y al limpiar vuelve la lista completa.";;No ejecutado;;;;
+TC-COM-007;COM · Oferta sostenible (comprador);HLTC-COM-02;Privacidad del productor ante el comprador;HU-CLI-02;Alta;Seguridad;comprador;"Oferta de ""Agricultor Demo"".";GET /api/ofertas;"1. Revisar la tarjeta de la oferta.
+2. Revisar la respuesta JSON.";"1. El productor aparece como ""Agricultor D.""; no hay correo ni teléfono.
+2. No contiene email; lat/lon están redondeadas (~2 km) y no coinciden con la parcela exacta.";;No ejecutado;;;;
+TC-COM-008;COM · Oferta sostenible (comprador);HLTC-COM-03;Enviar solicitud de compra;HU-CLI-03;Alta;Funcional;comprador;Oferta activa.;"Tipo compra, cantidad 10, mensaje ""Somos la cooperativa de Tiquipaya, lo necesitamos en diciembre.""";"1. Pulsar ""Contactar al productor"", elegir compra, cantidad y mensaje; enviar.
+2. Abrir ""Mis solicitudes (n)"".";"1. Se envía y la tarjeta muestra ""Ya envió una solicitud: espere la respuesta en “Mis solicitudes”.""
+2. La solicitud aparece pendiente; n incluye la nueva.";;No ejecutado;;;;
+TC-COM-009;COM · Oferta sostenible (comprador);HLTC-COM-03;Solicitud de solo contacto;HU-CLI-03;Media;Funcional;comprador;Otra oferta activa.;Tipo contacto, sin cantidad;1. Enviar una solicitud de contacto sin cantidad.;1. Se envía correctamente.;;No ejecutado;;;;
+TC-COM-010;COM · Oferta sostenible (comprador);HLTC-COM-03;Validaciones de la solicitud;HU-CLI-03;Alta;Negativa;comprador;—;"Mensaje de 9 caracteres; compra sin cantidad; tipo ""regalo""";"1. Enviar con mensaje de 9 caracteres.
+2. Enviar tipo compra sin cantidad.
+3. Enviar tipo ""regalo"" por API.";"1. Error ""Escriba un mensaje de al menos 10 caracteres"".
+2. Error ""Indique la cantidad que quiere comprar"".
+3. HTTP 400 ""Tipo de solicitud no válido"".";;No ejecutado;;;;
+TC-COM-011;COM · Oferta sostenible (comprador);HLTC-COM-03;Una solicitud pendiente por oferta;HU-CLI-03;Alta;Negativa;comprador;Solicitud pendiente en la oferta O.;POST /api/solicitudes sobre O;1. Enviar otra solicitud sobre O por API.;"1. HTTP 409 ""Ya tiene una solicitud pendiente para esta oferta"".";;No ejecutado;;;;
+TC-COM-012;COM · Oferta sostenible (comprador);HLTC-COM-03;Límite de 20 solicitudes por día;HU-CLI-03;Media;Límite;comprador;comprador2 con 20 solicitudes en las últimas 24 h (crear por API sobre ≥ 20 ofertas o retirando y reenviando).;—;1. Enviar la solicitud 21.;"1. HTTP 429 ""Puede enviar hasta 20 solicitudes por día"".";;No ejecutado;;;;
+TC-COM-013;COM · Oferta sostenible (comprador);HLTC-COM-03;Retirar una solicitud pendiente;HU-CLI-03;Media;Funcional;comprador;Una solicitud pendiente y una aceptada.;—;"1. Pulsar ""Retirar solicitud"" en la pendiente.
+2. Intentar retirar la aceptada por API.";"1. Estado ""retirada""; el productor ya no puede responderla.
+2. HTTP 409 ""Solo se puede retirar una solicitud pendiente"".";;No ejecutado;;;;
+TC-COM-014;COM · Oferta sostenible (comprador);HLTC-COM-03;Oferta pausada o propia;HU-CLI-03;Media;Negativa;comprador;Oferta pausada por el productor.;POST /api/solicitudes con su oferta_id;1. Enviar una solicitud a la oferta pausada.;"1. HTTP 404 ""La oferta ya no está disponible"".";;No ejecutado;;;;
+TC-CAM-001;CAM · Plagas y enfermedades en campo;HLTC-CAM-01;Registrar incidencia con GPS y fotos;HU-OPT-02;Alta;Funcional;operativo;"Teléfono con GPS en https/localhost; Drive no configurado.";"Tipo plaga, agente ""Gorgojo de los Andes"", cultivo Papa, severidad alta, nota ""30 % de plantas con galerías"", 2 fotos JPEG";"1. Abrir Plagas en campo > Marcar incidencia; en ""1. ¿Dónde está?"" pulsar ""Usar mi ubicación (GPS)"".
+2. En ""2. ¿Qué encontró?"" completar tipo, agente, cultivo, severidad y nota.
+3. En ""3. Fotos"" añadir 2 fotos y guardar.
+4. Abrir la incidencia en ""Registradas"".";"1. Muestra las coordenadas con ""GPS, precisión ±N m"".
+2. Campos aceptados.
+3. Se guarda; la pestaña ""Registradas (n)"" incrementa n.
+4. Muestra los datos, estado activa y las 2 fotos.";;No ejecutado;;;;
+TC-CAM-002;CAM · Plagas y enfermedades en campo;HLTC-CAM-01;Corregir ubicación tocando el mapa (capa satelital);HU-OPT-02;Media;Funcional;operativo;—;—;"1. Cambiar a la capa satelital y tocar otro punto del mapa.
+2. Intentar guardar sin ubicación en un registro nuevo.";"1. La ubicación cambia y se indica ""marcado a mano en el mapa"".
+2. Error ""Falta la ubicación: use el GPS o toque el mapa.""";;No ejecutado;;;;
+TC-CAM-003;CAM · Plagas y enfermedades en campo;HLTC-CAM-01;Validaciones de la incidencia;HU-OPT-02;Alta;Negativa;operativo;—;"Agente ""ab""; tipo ""virus""; severidad ""extrema""; cultivo ""cafe""; precision_m 30001";"1. Guardar con agente de 2 caracteres.
+2. Por API enviar tipo ""virus"" y severidad ""extrema"".
+3. Por API enviar cultivo ""cafe"".
+4. Por API enviar precision_m 30001.";"1. Error ""Indique qué plaga, enfermedad o deficiencia observó"".
+2. HTTP 400 ""Tipo no válido"" / ""Severidad no válida"".
+3. HTTP 400 ""Cultivo desconocido"".
+4. HTTP 400 ""Precisión GPS no válida"".";;No ejecutado;;;;
+TC-CAM-004;CAM · Plagas y enfermedades en campo;HLTC-CAM-01;Límites de fotos;HU-OPT-02;Alta;Límite;operativo;Incidencia registrada.;"6 fotos; foto de > 8 MB (vía API sin reducir); archivo PDF";"1. Añadir 5 fotos.
+2. Por API subir una sexta foto a la misma incidencia.
+3. Enviar por API una imagen de más de 8 MB.
+4. Enviar un PDF con Content-Type application/pdf.";"1. El título muestra ""3. Fotos 5 de 5"" y desaparece la opción de añadir más.
+2. HTTP 400 ""Cada incidencia admite hasta 5 fotos"".
+3. HTTP 413 ""El archivo es demasiado grande"".
+4. HTTP 400 ""Envíe la foto como imagen JPEG, PNG o WebP"".";;No ejecutado;;;;
+TC-CAM-005;CAM · Plagas y enfermedades en campo;HLTC-CAM-01;Reducción de fotos y eliminación de EXIF;HU-OPT-02;Media;Seguridad;operativo;Foto de 4000 px con EXIF de GPS.;—;"1. Subir la foto desde la interfaz.
+2. Descargar la foto guardada (Backend/fotos/ o Drive) y revisar sus propiedades.";"1. Se guarda.
+2. Es JPEG, su lado mayor es ≤ 1600 px y no tiene metadatos EXIF.";;No ejecutado;;;;
+TC-CAM-006;CAM · Plagas y enfermedades en campo;HLTC-CAM-01;Almacén de fotos local o Google Drive;HU-OPT-02;Media;Integración;operativo, administrador;"Corrida A sin GOOGLE_DRIVE_*; corrida B con cuenta de servicio y unidad compartida.";—;"1. Corrida A: abrir Plagas en campo.
+2. Corrida B: subir una foto.
+3. Corrida B: Administración > Sistema.";"1. Aviso: ""Google Drive no está configurado: las fotos se guardan en el servidor de Poseidon…""; los archivos quedan en Backend/fotos/.
+2. En la unidad compartida aparece ""incidencia-<id>-<AAAAMMDD>-<n>.jpg"" con descripción (tipo, agente, coordenadas, técnico).
+3. Indica que la conexión con Drive funciona.";;No ejecutado;;;;
+TC-CAM-007;CAM · Plagas y enfermedades en campo;HLTC-CAM-02;Marcar incidencia controlada o activa;HU-OPT-02;Media;Funcional;operativo;Incidencia activa.;—;"1. En ""Registradas"" cambiar el ""Estado"" a controlada.
+2. Volver a activa.
+3. PATCH con estado ""resuelta"".";"1. Se guarda; deja de contar en la comparación (ver TC-ROT-008) y en plagas activas del monitoreo.
+2. Se guarda.
+3. HTTP 400 ""Estado no válido"".";;No ejecutado;;;;
+TC-CAM-008;CAM · Plagas y enfermedades en campo;HLTC-CAM-02;Monitoreo consulta incidencias pero no registra;HU-OPT-02;Media;Seguridad;monitoreo;Incidencias con fotos.;—;"1. Como monitoreo, abrir el mapa del Panorama.
+2. GET /api/incidencias/:id/fotos/:foto con su token.
+3. POST /api/incidencias con su token.";"1. Ve las incidencias activas (posición aproximada).
+2. HTTP 200 con la imagen.
+3. HTTP 403.";;No ejecutado;;;;
+TC-GLO-001;GLO · Glosario y guía;HLTC-GLO-01;Cuadro emergente de un término;HU-USR-04;Media;Usabilidad;cliente;Comparación o ficha abierta.;"Término ""Verdor de la parcela (NDVI)""";"1. Localizar un término con línea punteada y ""?"".
+2. Tocarlo.
+3. Cerrarlo con la tecla Escape y, tras reabrirlo, tocando fuera del cuadro.";"1. Tiene estilo distintivo.
+2. Se abre un cuadro con explicación en lenguaje cotidiano, apoyo visual, ejemplo práctico, cómo lo usa Poseidon y la fuente.
+3. Se cierra en ambos casos.";;No ejecutado;;;;
+TC-GLO-002;GLO · Glosario y guía;HLTC-GLO-01;Cuadro como hoja inferior en el teléfono;HU-USR-04;Baja;Usabilidad;cliente;Viewport 375 px.;—;1. Tocar un término.;1. El cuadro aparece como hoja inferior que no desborda la pantalla.;;No ejecutado;;;;
+TC-GLO-003;GLO · Glosario y guía;HLTC-GLO-01;Vista Glosario: buscador y filtro;HU-USR-04;Media;Funcional;Cualquiera;—;"Búsqueda ""helada""; filtro por tema";"1. Abrir Glosario.
+2. Buscar ""helada"".
+3. Usar ""Filtrar por tema"".
+4. Buscar ""SMAP"".
+5. Buscar ""xyz123"".";"1. Muestra ""Guía rápida: cómo leer su comparación"" y la lista de términos.
+2. Filtra los términos relacionados.
+3. Muestra solo los términos del tema.
+4. Aparece marcado como ""aún no se usa"".
+5. No se muestra ningún término y la vista no da error.";;No ejecutado;;;;
+TC-GLO-004;GLO · Glosario y guía;HLTC-GLO-01;Ir al glosario completo desde el cuadro;HU-USR-04;Baja;Funcional;cliente;Cuadro emergente abierto.;—;"1. Pulsar ""Ver en el glosario completo"".";1. Cambia a la vista Glosario posicionada en ese término.;;No ejecutado;;;;
+TC-NFR-001;NFR · No funcionales;HLTC-NFR-01;Diseño responsive en teléfono;HU-USR-06;Alta;Usabilidad;Todos;DevTools device toolbar 375×812.;—;"1. Recorrer todas las vistas de cada rol.
+2. Revisar cabecera y menú.";"1. No hay scroll horizontal de página; las tablas se apilan o se desplazan dentro de su contenedor.
+2. Botones legibles y pulsables (≥ 40 px de alto aprox.).";;No ejecutado;;;;
+TC-NFR-002;NFR · No funcionales;HLTC-NFR-01;Compatibilidad de navegadores;—;Media;Compatibilidad;cliente, operativo;Chrome, Edge, Firefox (escritorio), Chrome Android, Safari iOS.;—;1. Ejecutar en cada navegador: ingreso, registrar parcela, comparar, ficha, registrar incidencia.;1. Funcionan sin errores de consola ni de diseño.;;No ejecutado;;;;
+TC-NFR-003;NFR · No funcionales;HLTC-NFR-02;Tiempo de carga en 3G;HU-USR-06;Media;Rendimiento;cliente;"npm run build && npm run preview; throttling personalizado 400 kbit/s, 400 ms y ""3G"" 1,6 Mbit/s, 150 ms; modo bajo consumo activo.";"Referencia README: 3G lento 3,4 s / 0,9 s; 3G 1,1 s / 0,3 s";"1. Medir la primera carga (caché vacía) hasta ver el resumen.
+2. Medir la visita siguiente.";"1. Tiempo ≤ referencia + 20 %.
+2. Tiempo ≤ referencia + 20 %.";;No ejecutado;;;;
+TC-NFR-004;NFR · No funcionales;HLTC-NFR-03;Modo memoria sin MySQL;—;Alta;Resiliencia;administrador;MySQL detenido o credenciales vacías en .env.;—;"1. Arrancar el backend.
+2. Ingresar con los usuarios demo y ejecutar el smoke.
+3. Reiniciar el backend.";"1. La consola indica ""datos: memoria""; la API responde.
+2. Todo funciona.
+3. Los datos creados se pierden (comportamiento esperado); Administración > Sistema muestra el modo memoria.";;No ejecutado;;;;
+TC-NFR-005;NFR · No funcionales;HLTC-NFR-04;Texto con HTML/script se muestra como texto (XSS);—;Alta;Seguridad;cliente, comprador, operativo;—;<script>alert(1)</script> y <img src=x onerror=alert(1)>;"1. Usar los datos en: nombre de parcela, nota de oferta, mensaje de solicitud, observación de visita y agente de incidencia.
+2. Ver esos datos en las pantallas de los demás roles.";"1. Se guardan.
+2. Se muestran como texto literal; no se ejecuta ningún script ni aparece un alert.";;No ejecutado;;;;
+TC-NFR-006;NFR · No funcionales;HLTC-NFR-04;Inyección de fórmulas en CSV;—;Media;Seguridad;operativo;—;"Observación de visita ""=HYPERLINK(\""http://x\"",\""clic\"")""";"1. Registrar la visita y exportar el CSV; abrirlo en Excel.";1. La celda empieza con apóstrofo y se muestra como texto, no como fórmula.;;No ejecutado;;;;
+TC-NFR-007;NFR · No funcionales;HLTC-NFR-04;Cuerpo de petición demasiado grande;—;Baja;Seguridad;cliente;—;JSON de 60 KB en POST /api/parcelas;1. Enviar la petición.;"1. HTTP 413 ""El archivo es demasiado grande""; el servidor sigue respondiendo.";;No ejecutado;;;;
+TC-NFR-008;NFR · No funcionales;HLTC-NFR-05;Navegación con teclado y etiquetas;—;Media;Accesibilidad;cliente;Lighthouse disponible.;—;"1. Recorrer ingreso, menú y comparador solo con Tab/Shift+Tab/Enter.
+2. Ejecutar Lighthouse > Accessibility en Mi finca.
+3. Revisar que los mensajes de error se anuncian.";"1. Todos los controles son alcanzables y el foco es visible.
+2. Puntaje ≥ 90; los errores se reportan con el elemento afectado.
+3. Tienen role=""alert"".";;No ejecutado;;;;
+TC-NFR-009;NFR · No funcionales;HLTC-NFR-05;Suite de pruebas automáticas del backend;—;Alta;Funcional;QA / Dev;Dependencias instaladas.;—;"1. Ejecutar ""cd Backend && npm test"".";1. Todas las pruebas pasan (0 fallidas).;;No ejecutado;;;;
+TC-NFR-010;NFR · No funcionales;HLTC-NFR-03;Servicios externos opcionales no configurados;—;Media;Resiliencia;administrador, operativo;Sin TWILIO_*, GOOGLE_DRIVE_*, GAMC_WMS_*.;—;1. Revisar Administración > Sistema, Alertas, Plagas en campo y Monitoreo.;1. Cada vista avisa del modo simulado/local/no configurado y sigue funcionando sin errores 500.;;No ejecutado;;;;
