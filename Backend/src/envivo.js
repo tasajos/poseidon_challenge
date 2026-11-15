@@ -5,7 +5,7 @@
 // (misión del año 2000). La vista lo dice; "en vivo" significa que se consulta ahora, no que el dato sea de hoy.
 import 'dotenv/config';
 import * as db from './db.js';
-import { requierePermiso } from './auth.js';
+import { tienePermiso } from './auth.js';
 import { climatologia } from './power.js';
 import { consultarTerreno, riesgoErosion, terrenoDisponible, FUENTE_TERRENO } from './terreno.js';
 import { resumenAnual, tendencia, estadoNdvi, ndviDisponible, FUENTE_NDVI, SUELO_DESNUDO } from './ndvi.js';
@@ -92,9 +92,15 @@ export function resumirDiario(dias, normal) {
   };
 }
 
+// La vista es de todos los agricultores (rol cliente), tengan o no el permiso evaluar; otros roles la usan
+// solo si el administrador les dio ese permiso.
+const delAgricultor = (req, res, next) => (req.usuario.rol === 'cliente' || tienePermiso(req.usuario, 'evaluar')
+  ? next()
+  : res.status(403).json({ error: 'Esta sección es para agricultores.' }));
+
 export function registrarNasaVivo(app, { sesion, ruta, error }) {
   // ?parcela=ID (por defecto la primera) · ?fresco=1 vuelve a consultar a la NASA sin usar la caché.
-  app.get('/api/nasa/en-vivo', sesion, requierePermiso('evaluar'), ruta(async (req, res) => {
+  app.get('/api/nasa/en-vivo', sesion, delAgricultor, ruta(async (req, res) => {
     const u = req.usuario;
     const parcelas = (await db.listarParcelas({ usuarioId: u.id })).sort((a, b) => a.id - b.id);
     const lista = parcelas.map((p) => ({ id: p.id, nombre: p.nombre, lat: p.lat, lon: p.lon, perimetro: p.perimetro || null }));
@@ -163,7 +169,7 @@ export function registrarNasaVivo(app, { sesion, ruta, error }) {
   }));
 
   // Consola: eventos de la traza provocados por esta persona, desde el id `desde`.
-  app.get('/api/nasa/consola', sesion, requierePermiso('evaluar'), ruta(async (req, res) => {
+  app.get('/api/nasa/consola', sesion, delAgricultor, ruta(async (req, res) => {
     const desde = Math.max(0, Number(req.query.desde) || 0);
     res.json(eventosDe(req.usuario.id, desde));
   }));

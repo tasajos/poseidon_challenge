@@ -2,7 +2,7 @@
 // muestra los datos en un tablero y un mapa, y una consola con cada consulta que hizo el servidor.
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
-import { Mapa, Stat, fecha, fechaHora, useLigero } from '../componentes.jsx';
+import { Mapa, Stat, fecha, fechaHora, puede, useLigero } from '../componentes.jsx';
 import { Termino } from '../Termino.jsx';
 import { GraficaTemperaturaDiaria, GraficaLluviaDiaria } from '../graficas.jsx';
 
@@ -10,7 +10,7 @@ const num = (v, dec = 1) => (v === null || v === undefined ? '—' : Number(v).t
 const diaCorto = (f) => (f ? new Date(`${f}T12:00:00Z`).toLocaleDateString('es-BO', { day: 'numeric', month: 'short', timeZone: 'UTC' }) : '');
 const RIESGO = { bajo: 'Riesgo de erosión bajo', medio: 'Riesgo de erosión medio', alto: 'Riesgo de erosión alto' };
 
-export default function NasaVivo() {
+export default function NasaVivo({ usuario, irA }) {
   const [parcelaId, setParcelaId] = useState(null);
   const [datos, setDatos] = useState(null);
   const [error, setError] = useState('');
@@ -44,11 +44,20 @@ export default function NasaVivo() {
   if (error && !datos) return <p className="error">{error}</p>;
   if (!datos) return <p className="cargando">Consultando a la NASA…</p>;
   if (!datos.parcelas.length) {
+    const puedeRegistrar = puede(usuario, 'evaluar');
     return (
-      <div className="caja">
-        <h2>Primero registre una parcela</h2>
-        <p>Los datos de la NASA se piden para el lugar de su parcela. Vaya a <b>Mi finca</b>, registre su parcela y vuelva aquí.</p>
-        <Consola alNuevoEvento={alNuevoEvento} />
+      <div className="caja nasa-sin-parcela">
+        <h2>Primero debe crear su parcela</h2>
+        <p>Los datos de la NASA (clima, relieve y verdor) se piden para el lugar exacto de su parcela. Todavía no tiene
+          ninguna registrada, por eso aquí no hay datos que mostrar.</p>
+        {puedeRegistrar ? (
+          <>
+            <p>Créela en <b>Mi finca</b>: marque su terreno en el mapa y póngale un nombre. Al volver aquí verá sus datos.</p>
+            <button type="button" className="principal" onClick={() => irA?.('finca')}>Crear mi parcela</button>
+          </>
+        ) : (
+          <p className="aviso">Su cuenta no tiene permiso para registrar parcelas. Pida al administrador de Poseidon que se lo habilite.</p>
+        )}
       </div>
     );
   }

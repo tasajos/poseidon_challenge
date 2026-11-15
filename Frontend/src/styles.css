@@ -1075,6 +1075,7 @@ html.ligero .stat:hover { transform: none; }
 .nasa-rejilla .viz-lienzo { max-width: none; }
 .nasa-lateral { display: grid; gap: 16px; min-width: 0; }
 .nasa-coord { font-size: 12px; margin: 6px 0 0; font-variant-numeric: tabular-nums; }
+.nasa-sin-parcela .principal { width: auto; padding-left: 28px; padding-right: 28px; }
 .nasa-fuentes summary { cursor: pointer; font-weight: 700; }
 .nasa-fuentes ul { margin: 10px 0 0 18px; display: grid; gap: 6px; font-size: 14px; }
 
@@ -1114,7 +1115,7 @@ html.ligero .consola-estado.activa::before { animation: none; }
   .nasa-rejilla { grid-template-columns: minmax(0, 1fr); }
 }
 @media (max-width: 560px) {
-  .nasa-barra .principal { width: 100%; }
+  .nasa-barra .principal, .nasa-sin-parcela .principal { width: 100%; }
   .nasa-stats { grid-template-columns: 1fr 1fr; }
   .consola-pantalla { height: 240px; font-size: 11px; }
   /* La gráfica se reduce a ~55 %: el texto del SVG se agranda para leerse a unos 10 px */

@@ -330,8 +330,8 @@ Si **acepta**, verán sus datos y usted verá el correo del comprador para coord
 
 ## 7. NASA en vivo: los datos de la NASA de su parcela
 
-En el menú, pulse **NASA en vivo**. Si todavía no registró una parcela, la página le pide hacerlo primero en
-*Mi finca*: los datos se piden para el lugar de su parcela.
+En el menú, pulse **NASA en vivo**. Si todavía no registró una parcela, la página le avisa que primero debe crearla:
+pulse **Crear mi parcela** y lo lleva a *Mi finca*. Los datos se piden para el lugar de su parcela.
 
 1. Si tiene varias parcelas, elija una en **Parcela** (o toque su punto en el mapa).
 2. Pulse **Consultar ahora a la NASA**. Poseidon pide los datos en ese momento; tarda unos segundos.

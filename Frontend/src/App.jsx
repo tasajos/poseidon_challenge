@@ -22,7 +22,7 @@ const Campo = lazy(() => import('./paginas/Campo.jsx'));
 // el backend vuelve a comprobar cada permiso en cada petición.
 const MODULOS = [
   { clave: 'finca', icono: 'ubicacion', permisos: ['evaluar'], Panel: Cliente, menu: 'Mi finca', titulo: 'Mi finca', bajada: 'Registre su parcela y compare rotaciones' },
-  { clave: 'nasa', icono: 'satelite', permisos: ['evaluar'], Panel: NasaVivo, menu: 'NASA en vivo', titulo: 'Datos de la NASA en vivo', bajada: 'Clima, relieve y vegetación de su parcela, consultados ahora a NASA POWER, SRTM y MODIS' },
+  { clave: 'nasa', icono: 'satelite', permisos: ['evaluar'], roles: ['cliente'], Panel: NasaVivo, menu: 'NASA en vivo', titulo: 'Datos de la NASA en vivo', bajada: 'Clima, relieve y vegetación de su parcela, consultados ahora a NASA POWER, SRTM y MODIS' },
   { clave: 'revision', icono: 'llave', permisos: ['revisar'], Panel: Operativo, menu: 'Asistencia técnica', titulo: 'Asistencia técnica', bajada: 'Sus parcelas asignadas, revisiones y visitas de campo' },
   { clave: 'monitoreo', icono: 'barras', permisos: ['reportes'], Panel: Monitoreo, menu: 'Monitoreo', titulo: 'Monitoreo regional', bajada: 'Panorama por zona, escenarios de agua, adopción y suelo desnudo' },
   { clave: 'alertas', icono: 'campana', permisos: ['alertas'], Panel: Alertas, menu: 'Alertas', titulo: 'Alertas climáticas', bajada: 'Avisos de helada y sequía en su teléfono' },
@@ -35,7 +35,8 @@ const MODULOS = [
 const INICIO = { cliente: 'finca', operativo: 'revision', monitoreo: 'monitoreo', administrador: 'admin', comprador: 'oferta' };
 
 function modulosDe(usuario) {
-  const lista = MODULOS.filter((m) => !m.permisos.length || m.permisos.some((p) => puede(usuario, p)));
+  // roles: la sección aparece siempre para esos roles, aunque el administrador cambie sus permisos.
+  const lista = MODULOS.filter((m) => !m.permisos.length || m.roles?.includes(usuario.rol) || m.permisos.some((p) => puede(usuario, p)));
   const inicio = lista.find((m) => m.clave === INICIO[usuario.rol]);
   return inicio ? [inicio, ...lista.filter((m) => m !== inicio)] : lista;
 }
@@ -200,7 +201,7 @@ export default function App() {
                   <p className="admin-bajada">{modulo.bajada}</p>
                   <main>
                     <Suspense fallback={<p className="cargando">Cargando…</p>}>
-                      <modulo.Panel key={`${modulo.clave}-${ligero ? 'l' : 'c'}`} usuario={usuario}
+                      <modulo.Panel key={`${modulo.clave}-${ligero ? 'l' : 'c'}`} usuario={usuario} irA={irA}
                         pedido={modulo.clave === 'glosario' ? pedidoGlosario : undefined} />
                     </Suspense>
                   </main>
