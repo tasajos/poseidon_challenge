@@ -5,13 +5,9 @@ import mysql from 'mysql2/promise';
 import { DatabaseSync } from 'node:sqlite';
 import { readFile } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
-<<<<<<< HEAD
 import dotenv from 'dotenv';
-=======
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
-import 'dotenv/config';
->>>>>>> aac18b5260136d1d4e22fb3a8faff2318cc6c01a
 import { hashPassword } from './auth.js';
 import { indicadoresMensuales } from './clima.js';
 import { compararRotaciones } from './rotacion.js';
@@ -163,6 +159,83 @@ export async function seedSQLite() {
   }
 }
 
+// Evaluaciones de ejemplo para el modo memoria, para que los paneles no se vean vacíos en una demostración.
+// No se cargan en las pruebas automáticas (clave 'clave-de-prueba-1'), que esperan una base vacía.
+async function evaluacionesDemo(usuarios, clave) {
+  if (clave === 'clave-de-prueba-1') return [];
+  const lista = [];
+  try {
+    const climaDemo = JSON.parse(await readFile(new URL('./data/clima_demo.json', import.meta.url), 'utf8'));
+    const cultivosRaw = await cultivosDeArchivo();
+    const cultivos = cultivosRaw.map((c) => ({
+      ...c, kc: Number(c.kc),
+      fija_nitrogeno: Boolean(c.fija_nitrogeno), raiz_profunda: Boolean(c.raiz_profunda), forraje: Boolean(c.forraje),
+    }));
+    const clienteId = usuarios.find((u) => u.rol === 'cliente')?.id || 3;
+    const tecnicoId = usuarios.find((u) => u.rol === 'operativo')?.id || 2;
+
+    const prio1 = { agua: 4, suelo: 3, clima: 3, ingreso: 3, forraje: 1 };
+    const meses1 = indicadoresMensuales(-17.3945, climaDemo);
+    lista.push({
+      id: 1,
+      usuario_id: clienteId,
+      parcela: 'Finca Tiquipaya',
+      lat: -17.3945,
+      lon: -66.1650,
+      rotacion_actual: ['maiz', 'papa', 'haba'],
+      prioridades: prio1,
+      fuente_clima: 'demo',
+      resultado: compararRotaciones(['maiz', 'papa', 'haba'], cultivos, meses1, prio1),
+      estado: 'pendiente',
+      nota_tecnico: null,
+      revisado_por: null,
+      revisado_en: null,
+      creado_en: new Date(Date.now() - 43200000),
+    });
+
+    const prio2 = { agua: 4, suelo: 4, clima: 3, ingreso: 2, forraje: 1 };
+    const meses2 = indicadoresMensuales(-17.3810, climaDemo);
+    lista.push({
+      id: 2,
+      usuario_id: clienteId,
+      parcela: 'Valle Bajo / Cochabamba',
+      lat: -17.3810,
+      lon: -66.1560,
+      rotacion_actual: ['papa', 'haba'],
+      prioridades: prio2,
+      fuente_clima: 'demo',
+      resultado: compararRotaciones(['papa', 'haba'], cultivos, meses2, prio2),
+      estado: 'pendiente',
+      nota_tecnico: null,
+      revisado_por: null,
+      revisado_en: null,
+      creado_en: new Date(Date.now() - 86400000),
+    });
+
+    const prio3 = { agua: 5, suelo: 4, clima: 2, ingreso: 3, forraje: 2 };
+    const meses3 = indicadoresMensuales(-17.3875, climaDemo);
+    lista.push({
+      id: 3,
+      usuario_id: clienteId,
+      parcela: 'Chacra Valle Central',
+      lat: -17.3875,
+      lon: -66.1445,
+      rotacion_actual: ['quinua', 'haba'],
+      prioridades: prio3,
+      fuente_clima: 'demo',
+      resultado: compararRotaciones(['quinua', 'haba'], cultivos, meses3, prio3),
+      estado: 'revisada',
+      nota_tecnico: 'Se recomienda mantener la rotación con haba para fijar nitrógeno en el suelo y conservar la humedad.',
+      revisado_por: tecnicoId,
+      revisado_en: new Date(),
+      creado_en: new Date(Date.now() - 172800000),
+    });
+  } catch {
+    // Si falla la semilla de demostración, se continúa con la lista vacía
+  }
+  return lista;
+}
+
 async function iniciarMemoria(razon) {
   let clave = process.env.DEMO_PASSWORD;
   if (!clave || clave === 'cambie-esta-clave') {
@@ -170,12 +243,10 @@ async function iniciarMemoria(razon) {
     console.warn(`[db] DEMO_PASSWORD no definido; clave temporal de los usuarios demo: ${clave}`);
   }
   const hash = hashPassword(clave);
-  memoria = {
-    usuarios: (await usuariosDemo()).map((u, i) => ({
-      id: i + 1, ...u, password_hash: hash, activo: true, creado_en: new Date(),
-    })),
-    evaluaciones: [],
-  };
+  const usuarios = (await usuariosDemo()).map((u, i) => ({
+    id: i + 1, ...u, password_hash: hash, activo: true, creado_en: new Date(),
+  }));
+  memoria = { usuarios, evaluaciones: await evaluacionesDemo(usuarios, clave) };
   console.warn(`[db] Modo memoria activo (${razon}).`);
 }
 
@@ -217,90 +288,6 @@ export async function iniciar() {
     } catch (sqliteErr) {
       await iniciarMemoria(sqliteErr.message);
     }
-<<<<<<< HEAD
-    const hash = hashPassword(clave);
-    const usuariosIniciales = (await usuariosDemo()).map((u, i) => ({
-      id: i + 1, ...u, password_hash: hash, activo: true, creado_en: new Date(),
-    }));
-    const evaluacionesIniciales = [];
-    if (clave !== 'clave-de-prueba-1') {
-      try {
-        const climaDemo = JSON.parse(await readFile(new URL('./data/clima_demo.json', import.meta.url), 'utf8'));
-        const cultivosRaw = await cultivosDeArchivo();
-        const cultivos = cultivosRaw.map((c) => ({
-          ...c, kc: Number(c.kc),
-          fija_nitrogeno: Boolean(c.fija_nitrogeno), raiz_profunda: Boolean(c.raiz_profunda), forraje: Boolean(c.forraje),
-        }));
-        const clienteId = usuariosIniciales.find((u) => u.rol === 'cliente')?.id || 3;
-        const tecnicoId = usuariosIniciales.find((u) => u.rol === 'operativo')?.id || 2;
-
-        const prio1 = { agua: 4, suelo: 3, clima: 3, ingreso: 3, forraje: 1 };
-        const meses1 = indicadoresMensuales(-17.3945, climaDemo);
-        evaluacionesIniciales.push({
-          id: 1,
-          usuario_id: clienteId,
-          parcela: 'Finca Tiquipaya',
-          lat: -17.3945,
-          lon: -66.1650,
-          rotacion_actual: ['maiz', 'papa', 'haba'],
-          prioridades: prio1,
-          fuente_clima: 'demo',
-          resultado: compararRotaciones(['maiz', 'papa', 'haba'], cultivos, meses1, prio1),
-          estado: 'pendiente',
-          nota_tecnico: null,
-          revisado_por: null,
-          revisado_en: null,
-          creado_en: new Date(Date.now() - 43200000),
-        });
-
-        const prio2 = { agua: 4, suelo: 4, clima: 3, ingreso: 2, forraje: 1 };
-        const meses2 = indicadoresMensuales(-17.3810, climaDemo);
-        evaluacionesIniciales.push({
-          id: 2,
-          usuario_id: clienteId,
-          parcela: 'Valle Bajo / Cochabamba',
-          lat: -17.3810,
-          lon: -66.1560,
-          rotacion_actual: ['papa', 'haba'],
-          prioridades: prio2,
-          fuente_clima: 'demo',
-          resultado: compararRotaciones(['papa', 'haba'], cultivos, meses2, prio2),
-          estado: 'pendiente',
-          nota_tecnico: null,
-          revisado_por: null,
-          revisado_en: null,
-          creado_en: new Date(Date.now() - 86400000),
-        });
-
-        const prio3 = { agua: 5, suelo: 4, clima: 2, ingreso: 3, forraje: 2 };
-        const meses3 = indicadoresMensuales(-17.3875, climaDemo);
-        evaluacionesIniciales.push({
-          id: 3,
-          usuario_id: clienteId,
-          parcela: 'Chacra Valle Central',
-          lat: -17.3875,
-          lon: -66.1445,
-          rotacion_actual: ['quinua', 'haba'],
-          prioridades: prio3,
-          fuente_clima: 'demo',
-          resultado: compararRotaciones(['quinua', 'haba'], cultivos, meses3, prio3),
-          estado: 'revisada',
-          nota_tecnico: 'Se recomienda mantener la rotación con haba para fijar nitrógeno en el suelo y conservar la humedad.',
-          revisado_por: tecnicoId,
-          revisado_en: new Date(),
-          creado_en: new Date(Date.now() - 172800000),
-        });
-      } catch {
-        // Si falla la semilla de demostración, continúa con lista vacía
-      }
-    }
-    memoria = {
-      usuarios: usuariosIniciales,
-      evaluaciones: evaluacionesIniciales,
-    };
-    console.warn(`[db] MySQL no disponible (${e.code || e.message}). Modo memoria: los datos no se guardan.`);
-=======
->>>>>>> aac18b5260136d1d4e22fb3a8faff2318cc6c01a
   }
 }
 

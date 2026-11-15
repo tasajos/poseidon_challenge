@@ -8,6 +8,9 @@ import { indicadoresMensuales } from './clima.js';
 import { compararRotaciones, CRITERIOS } from './rotacion.js';
 
 const app = express();
+// Solo se confía en el proxy de Vite de este mismo equipo: req.ip es la IP real de cada visitante de la red,
+// y nadie puede hacerse pasar por otro enviando su propia cabecera X-Forwarded-For.
+app.set('trust proxy', 'loopback');
 app.use(cors());
 app.use(express.json({ limit: '50kb' }));
 
