@@ -8,7 +8,25 @@ incidencias, fotos, ciclos, NDVI, visitas, validaciones, auditoría; datos de la
 y el rol `comprador` los crean el backend al arrancar y `npm run seed` si faltan, así que una base existente
 sigue sirviendo.
 
+## Actualizar una base existente después de un `git pull`
+
+Opción automática: `cd Backend && npm install && npm run seed` (o simplemente arrancar el backend). Aplica las
+tablas, columnas, el rol y los permisos que falten, sin borrar datos.
+
+Opción manual, para revisar el SQL antes de aplicarlo:
+
+```bash
+mysql -u root -p < Database/schema.sql       # crea las tablas que falten
+mysql -u root -p < Database/actualizar.sql   # agrega el rol y las columnas nuevas a tablas que ya existían
+cd Backend && npm run seed                    # catálogo, usuarios demo y permisos por defecto
+```
+
+`schema.sql` solo crea tablas (`CREATE TABLE IF NOT EXISTS`): no agrega columnas a una tabla que ya existe.
+Para eso está `actualizar.sql`, que se puede ejecutar más de una vez.
+
 ## Archivos
+- `actualizar.sql`: lleva una base existente al esquema actual (rol `comprador` y columnas nuevas de `usuarios`,
+  `parcelas` y `evaluaciones`).
 - `schema.sql`: tablas `usuarios`, `cultivos`, `parcelas`, `evaluaciones`, `rol_permisos`, las de alertas,
   `ofertas`, `solicitudes`, `incidencias` e `incidencia_fotos` (las fotos están en Google Drive; la tabla guarda su id),
   `ciclos` y `ndvi` (historial de cada parcela), `visitas` y `validaciones` (asistencia técnica) y `auditoria`.
