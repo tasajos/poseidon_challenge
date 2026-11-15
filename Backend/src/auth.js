@@ -2,6 +2,7 @@
 import { scryptSync, randomBytes, timingSafeEqual } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import 'dotenv/config';
+import { conUsuario } from './traza.js';
 
 export const ROLES = ['administrador', 'operativo', 'cliente', 'monitoreo', 'comprador'];
 
@@ -40,7 +41,7 @@ export function requiereSesion(buscarUsuario, permisosDeRol) {
     }
     try {
       req.usuario.permisos = await permisosDeRol(req.usuario.rol);
-      next();
+      conUsuario(req.usuario, next); // la traza de consultas a la NASA sabe quién las provocó
     } catch (e) {
       next(e);
     }

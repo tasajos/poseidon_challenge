@@ -13,6 +13,7 @@ const Monitoreo = lazy(() => import('./paginas/Monitoreo.jsx'));
 const Admin = lazy(() => import('./paginas/Admin.jsx'));
 const Alertas = lazy(() => import('./paginas/Alertas.jsx'));
 const Glosario = lazy(() => import('./paginas/Glosario.jsx'));
+const NasaVivo = lazy(() => import('./paginas/NasaVivo.jsx'));
 const Comprador = lazy(() => import('./paginas/Comprador.jsx'));
 const Ventas = lazy(() => import('./paginas/Ventas.jsx'));
 const Campo = lazy(() => import('./paginas/Campo.jsx'));
@@ -21,6 +22,7 @@ const Campo = lazy(() => import('./paginas/Campo.jsx'));
 // el backend vuelve a comprobar cada permiso en cada petición.
 const MODULOS = [
   { clave: 'finca', icono: 'ubicacion', permisos: ['evaluar'], Panel: Cliente, menu: 'Mi finca', titulo: 'Mi finca', bajada: 'Registre su parcela y compare rotaciones' },
+  { clave: 'nasa', icono: 'satelite', permisos: ['evaluar'], Panel: NasaVivo, menu: 'NASA en vivo', titulo: 'Datos de la NASA en vivo', bajada: 'Clima, relieve y vegetación de su parcela, consultados ahora a NASA POWER, SRTM y MODIS' },
   { clave: 'revision', icono: 'llave', permisos: ['revisar'], Panel: Operativo, menu: 'Asistencia técnica', titulo: 'Asistencia técnica', bajada: 'Sus parcelas asignadas, revisiones y visitas de campo' },
   { clave: 'monitoreo', icono: 'barras', permisos: ['reportes'], Panel: Monitoreo, menu: 'Monitoreo', titulo: 'Monitoreo regional', bajada: 'Panorama por zona, escenarios de agua, adopción y suelo desnudo' },
   { clave: 'alertas', icono: 'campana', permisos: ['alertas'], Panel: Alertas, menu: 'Alertas', titulo: 'Alertas climáticas', bajada: 'Avisos de helada y sequía en su teléfono' },

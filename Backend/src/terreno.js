@@ -4,6 +4,7 @@
 // parcela y la pendiente sale de esa grilla. SRTM tiene celdas de ~30 m y unos metros de error vertical:
 // describe la ladera, no los surcos ni las terrazas de la parcela.
 import 'dotenv/config';
+import { traza, punto } from './traza.js';
 
 const URL_ELEVACION = process.env.ELEVACION_URL ?? 'https://api.opentopodata.org/v1/srtm30m';
 const PASO_M = 30;
@@ -69,13 +70,21 @@ export async function consultarTerreno(lat, lon) {
   const dLat = PASO_M / 110574, dLon = PASO_M / (111320 * Math.cos((lat * Math.PI) / 180));
   const puntos = [];
   for (const i of [1, 0, -1]) for (const j of [-1, 0, 1]) puntos.push(`${(lat + i * dLat).toFixed(6)},${(lon + j * dLon).toFixed(6)}`);
-  const r = await fetch(`${URL_ELEVACION}?locations=${puntos.join('|')}`, { signal: AbortSignal.timeout(20000) });
-  if (!r.ok) throw new Error(`El servicio de elevación respondió ${r.status}`);
-  const d = await r.json();
-  const z = (d.results || []).map((x) => x.elevation);
-  if (z.length !== 9 || z.some((v) => typeof v !== 'number')) throw new Error('El servicio de elevación no tiene datos para este punto');
-  return {
-    elevacion_m: Math.round(z[4] * 10) / 10,
-    pendiente_pct: Math.round(pendienteDeGrilla([z.slice(0, 3), z.slice(3, 6), z.slice(6, 9)]) * 10) / 10,
-  };
+  const t0 = Date.now();
+  try {
+    const r = await fetch(`${URL_ELEVACION}?locations=${puntos.join('|')}`, { signal: AbortSignal.timeout(20000) });
+    if (!r.ok) throw new Error(`El servicio de elevación respondió ${r.status}`);
+    const d = await r.json();
+    const z = (d.results || []).map((x) => x.elevation);
+    if (z.length !== 9 || z.some((v) => typeof v !== 'number')) throw new Error('El servicio de elevación no tiene datos para este punto');
+    const t = {
+      elevacion_m: Math.round(z[4] * 10) / 10,
+      pendiente_pct: Math.round(pendienteDeGrilla([z.slice(0, 3), z.slice(3, 6), z.slice(6, 9)]) * 10) / 10,
+    };
+    traza('SRTM', 'descarga', `9 elevaciones ${punto(lat, lon)}: ${t.elevacion_m} m s. n. m., pendiente ${t.pendiente_pct} %`, Date.now() - t0);
+    return t;
+  } catch (e) {
+    traza('SRTM', 'error', `${punto(lat, lon)}: ${e.message}`, Date.now() - t0);
+    throw e;
+  }
 }

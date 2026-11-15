@@ -121,6 +121,9 @@ export const api = {
   pedirNdvi: (id) => pedir(`/api/parcelas/${id}/ndvi`, { method: 'POST' }),
   asignarParcela: (id, tecnico_id) => pedir(`/api/parcelas/${id}/asignacion`, { method: 'PATCH', body: { tecnico_id } }),
   resumen: () => pedir('/api/resumen'),
+  // NASA en vivo (agricultor)
+  nasaEnVivo: (parcela, fresco) => pedir(`/api/nasa/en-vivo?${consulta({ parcela, fresco: fresco ? 1 : undefined })}`),
+  consolaNasa: (desde) => pedir(`/api/nasa/consola?desde=${desde}`),
   adoptar: (id, estrategia) => pedir(`/api/evaluaciones/${id}/adopcion`, { method: 'PATCH', body: { estrategia } }),
   // Asistencia técnica (HU-OPT-03, HU-OPT-04)
   visitas: (filtros = {}) => pedir(`/api/visitas?${consulta(filtros)}`),

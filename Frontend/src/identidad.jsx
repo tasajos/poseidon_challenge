@@ -72,6 +72,13 @@ const ICONOS = {
       <path d="M13 3h5.5A1.5 1.5 0 0 1 20 4.5v14a1.5 1.5 0 0 1-1.5 1.5H13V3z" fill="currentColor" opacity=".7" />
     </>
   ),
+  satelite: (
+    <>
+      <rect x="9" y="9" width="6" height="6" rx="1" transform="rotate(45 12 12)" fill="currentColor" />
+      <path d="M3.5 7.5l3-3 4 4-3 3zM16.5 20.5l3-3-4-4-3 3z" fill="currentColor" opacity=".75" />
+      <path d="M15.5 4.5a4 4 0 0 1 4 4M15.5 1.8a6.7 6.7 0 0 1 6.7 6.7" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </>
+  ),
   salir: (
     <>
       <path d="M14 7l-5 5 5 5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />

@@ -5,6 +5,7 @@ import 'dotenv/config';
 import * as db from './db.js';
 import { climatologia } from './power.js';
 import { entregar } from './canales.js';
+import { traza, punto } from './traza.js';
 
 export const UMBRALES = {
   heladaC: Number(process.env.ALERTA_HELADA_C ?? 0),        // mínima diaria que dispara la alerta de helada
@@ -25,20 +26,33 @@ const cache = new Map(); // coordenadas → { hasta, dias }
 export async function diarioReciente(lat, lon) {
   const clave = `${lat.toFixed(2)},${lon.toFixed(2)}`;
   const guardado = cache.get(clave);
-  if (guardado && guardado.hasta > Date.now()) return guardado.dias;
+  if (guardado && guardado.hasta > Date.now()) {
+    traza('NASA POWER', 'cache', `datos diarios ${punto(lat, lon)}`);
+    return guardado.dias;
+  }
+  const t0 = Date.now();
   const fin = new Date();
   const inicio = new Date(fin.getTime() - (VENTANA + 6) * 864e5);
   const url = 'https://power.larc.nasa.gov/api/temporal/daily/point'
     + `?parameters=T2M_MIN,T2M_MAX,PRECTOTCORR&community=AG&longitude=${lon}&latitude=${lat}`
     + `&start=${ymd(inicio)}&end=${ymd(fin)}&format=JSON`;
-  const r = await fetch(url, { signal: AbortSignal.timeout(20000) });
-  if (!r.ok) throw new Error(`NASA POWER respondió ${r.status}`);
+  const r = await fetch(url, { signal: AbortSignal.timeout(20000) }).catch((e) => {
+    traza('NASA POWER', 'error', `datos diarios ${punto(lat, lon)}: ${e.message}`, Date.now() - t0);
+    throw e;
+  });
+  if (!r.ok) {
+    traza('NASA POWER', 'error', `datos diarios ${punto(lat, lon)}: respondió ${r.status}`, Date.now() - t0);
+    throw new Error(`NASA POWER respondió ${r.status}`);
+  }
   const p = (await r.json()).properties.parameter;
   const dias = Object.keys(p.T2M_MIN).sort()
     .map((fecha) => ({ fecha, tmin: p.T2M_MIN[fecha], tmax: p.T2M_MAX[fecha], lluvia: p.PRECTOTCORR[fecha] }))
     .filter((d) => d.tmin > -900 && d.tmax > -900 && d.lluvia > -900)
     .slice(-VENTANA);
   cache.set(clave, { hasta: Date.now() + 3 * 3600e3, dias });
+  const u = dias.at(-1);
+  traza('NASA POWER', 'descarga', `datos diarios ${punto(lat, lon)}: ${dias.length} días`
+    + (u ? `, último ${u.fecha} (mín ${u.tmin.toFixed(1)} °C, lluvia ${u.lluvia.toFixed(1)} mm)` : ''), Date.now() - t0);
   return dias;
 }
 

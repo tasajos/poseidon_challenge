@@ -5,6 +5,7 @@ import * as db from './db.js';
 import { ROLES, hashPassword, verificarPassword, crearToken, requiereSesion, requierePermiso, tienePermiso, limiteIngreso } from './auth.js';
 import { PERMISOS, FIJOS, ROLES_CON_APROBACION, esPermiso } from './permisos.js';
 import { registrarRutas, puedeVerParcela } from './rutas.js';
+import { registrarNasaVivo } from './envivo.js';
 import { prepararParcela } from './parcelas.js';
 import { riesgoErosion } from './terreno.js';
 import { climatologia } from './power.js';
@@ -576,6 +577,7 @@ app.get('/api/incidencias/:id/fotos/:foto', sesion, requierePermiso('incidencias
 }));
 
 registrarRutas(app, { sesion, ruta, error, texto, catalogoPorCodigo, resumir });
+registrarNasaVivo(app, { sesion, ruta, error });
 
 app.use((err, _req, res, _next) => {
   if (err.type === 'entity.too.large') return res.status(413).json({ error: 'El archivo es demasiado grande' });

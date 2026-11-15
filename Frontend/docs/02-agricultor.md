@@ -14,8 +14,9 @@ Para personas con el rol **`cliente`** (agricultor o sembrador). Si todavía no 
 3. **Guardar su historial**: las cosechas pasadas, su rendimiento y cómo cambió el verdor del terreno con los años.
 4. **Recibir alertas** de helada y sequía en el teléfono, aunque no tenga Poseidon abierto.
 5. **Vender su cosecha** a cooperativas y mercados de la zona, sin dar su teléfono ni su correo hasta que usted acepte.
+6. **Ver los datos de la NASA de su parcela** (clima de los últimos días, relieve y verdor) y comprobar que llegan de la NASA.
 
-En el menú verá estas secciones: **Mi finca**, **Alertas**, **Mis ventas** y **Glosario**.
+En el menú verá estas secciones: **Mi finca**, **NASA en vivo**, **Alertas**, **Mis ventas** y **Glosario**.
 
 **Orden recomendado la primera vez:** registre su parcela (punto 1) → compare rotaciones (punto 2) → active las
 alertas (punto 4). Lo demás puede hacerlo cuando quiera.
@@ -324,6 +325,39 @@ Cuando un comprador le escribe, recibe una notificación (si las tiene activadas
 
 Si **acepta**, verán sus datos y usted verá el correo del comprador para coordinar la venta directamente. Si
 **rechaza**, el comprador no ve ningún dato suyo. **La respuesta no se puede cambiar después.**
+
+---
+
+## 7. NASA en vivo: los datos de la NASA de su parcela
+
+En el menú, pulse **NASA en vivo**. Si todavía no registró una parcela, la página le pide hacerlo primero en
+*Mi finca*: los datos se piden para el lugar de su parcela.
+
+1. Si tiene varias parcelas, elija una en **Parcela** (o toque su punto en el mapa).
+2. Pulse **Consultar ahora a la NASA**. Poseidon pide los datos en ese momento; tarda unos segundos.
+   Si vuelve a pulsar antes de 30 segundos, se muestran los mismos datos.
+
+**Qué verá:**
+
+- **Tarjetas** con la mínima y la máxima del último día publicado, la lluvia del último mes frente a lo normal
+  del lugar, los días con helada, la humedad del aire y del suelo, la radiación del sol, el viento, la elevación
+  y pendiente del terreno y el verdor (NDVI).
+- **Temperatura de cada día**: la línea naranja es la máxima y la azul la mínima. La línea gris marca 0 °C:
+  si la azul la toca, ese día hubo helada. Pase el dedo o el ratón por la gráfica para ver cada día.
+- **Lluvia de cada día**: cada barra son los milímetros de lluvia de un día.
+- **Mapa de sus parcelas**: la parcela elegida es el punto naranja.
+- **Consola de la NASA**: una lista que se actualiza sola, con cada pedido que Poseidon hizo a la NASA por usted.
+  - **DESCARGA**: el dato acaba de llegar de la NASA (con el tiempo que tardó).
+  - **CACHÉ** o **GUARDADO**: se usó un dato que ya había llegado antes; no hacía falta pedirlo otra vez.
+  - **EN COLA**: el verdor (MODIS) se está pidiendo de a un año por vez; la primera vez tarda unos minutos.
+  - **ERROR**: la NASA no respondió; pruebe de nuevo más tarde.
+
+  Con **Pausar** la lista deja de moverse para leerla con calma; **Limpiar** la vacía.
+
+**Importante: "en vivo" no quiere decir "de hoy".** La NASA publica el clima de cada día con 2 a 4 días de
+retraso, el verdor cada 16 días y el relieve es una medición del año 2000. La tarjeta de la mínima dice hace
+cuántos días se publicó el dato. Además, el clima de la NASA describe un cuadro de unos 50 km alrededor de su
+parcela, no solo su terreno.
 
 ---
 

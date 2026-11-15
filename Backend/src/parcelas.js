@@ -4,6 +4,7 @@ import * as db from './db.js';
 import { superficieHa, centro, zonaDe } from './geo.js';
 import { consultarTerreno, terrenoDisponible, riesgoErosion } from './terreno.js';
 import { actualizarNdvi } from './ndvi.js';
+import { traza } from './traza.js';
 
 export const ETAPAS = { preparacion: 'Preparación del terreno', siembra: 'Siembra', crecimiento: 'Crecimiento', floracion: 'Floración', cosecha: 'Cosecha', descanso: 'En descanso' };
 export const RIEGOS = { permanente: 'Riego todo el año', temporal: 'Riego solo en algunos meses', sin_riego: 'Sin riego (solo lluvia)' };
@@ -84,15 +85,18 @@ export function vistaParcela(p, porCodigo) {
 
 // Consulta y guarda pendiente y elevación si faltan. Devuelve la parcela (actualizada si se pudo).
 export async function completarTerreno(p) {
-  if ((p.pendiente_pct !== null && p.pendiente_pct !== undefined) || !terrenoDisponible()) return p;
+  if (p.pendiente_pct !== null && p.pendiente_pct !== undefined) {
+    traza('SRTM', 'guardado', `parcela ${p.id} "${p.nombre}": ${p.elevacion_m} m, pendiente ${p.pendiente_pct} % (consultado antes)`);
+    return p;
+  }
+  if (!terrenoDisponible()) return p;
   try {
     const t = await consultarTerreno(p.lat, p.lon);
     const cambios = { ...t, terreno_en: new Date() };
     await db.actualizarParcela(p.id, cambios);
     return { ...p, ...cambios };
-  } catch (e) {
-    console.warn(`[terreno] Parcela ${p.id}: ${e.message}`);
-    return p;
+  } catch {
+    return p; // la traza de SRTM ya mostró el motivo
   }
 }
 

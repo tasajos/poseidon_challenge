@@ -4,6 +4,7 @@
 // Por cada año se guardan dos ventanas: época húmeda (enero-marzo, cultivos en pie) y época seca
 // (julio-septiembre, fuera de temporada). Un píxel de 250 m suele abarcar más que la parcela.
 import 'dotenv/config';
+import { traza, punto } from './traza.js';
 
 const URL_NDVI = process.env.NDVI_URL ?? 'https://modis.ornl.gov/rst/api/v1/MOD13Q1/subset';
 const ANIOS = Math.max(1, Math.min(8, Number(process.env.NDVI_ANIOS || 4)));
@@ -39,9 +40,19 @@ export function leerRespuesta(d) {
 
 async function consultar(lat, lon, v) {
   const url = `${URL_NDVI}?latitude=${lat}&longitude=${lon}&startDate=${v.inicio}&endDate=${v.fin}&kmAboveBelow=0&kmLeftRight=0&band=250m_16_days_NDVI`;
-  const r = await fetch(url, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(120000) });
-  if (!r.ok) throw new Error(`MODIS (ORNL DAAC) respondió ${r.status}`);
-  return leerRespuesta(await r.json());
+  const t0 = Date.now();
+  const ventana = `NDVI ${v.anio} época ${v.epoca === 'humeda' ? 'húmeda' : 'seca'} ${punto(lat, lon)}`;
+  try {
+    const r = await fetch(url, { headers: { Accept: 'application/json' }, signal: AbortSignal.timeout(120000) });
+    if (!r.ok) throw new Error(`MODIS (ORNL DAAC) respondió ${r.status}`);
+    const puntos = leerRespuesta(await r.json());
+    const medio = puntos.length ? (puntos.reduce((s, p) => s + p.valor, 0) / puntos.length).toFixed(3) : '—';
+    traza('MODIS', 'descarga', `${ventana}: ${puntos.length} compuestos, NDVI medio ${medio}`, Date.now() - t0);
+    return puntos;
+  } catch (e) {
+    traza('MODIS', 'error', `${ventana}: ${e.name === 'TimeoutError' ? 'sin respuesta a tiempo' : e.message}`, Date.now() - t0);
+    throw e;
+  }
 }
 
 // ---------- Resumen ----------
@@ -87,6 +98,9 @@ export function actualizarNdvi(parcela, { leer, guardar }) {
   cola = cola.then(async () => {
     try {
       const pendientes = ventanasPendientes(new Date(), ANIOS, await leer());
+      traza('MODIS', pendientes.length ? 'cola' : 'guardado', pendientes.length
+        ? `parcela ${parcela.id}: ${pendientes.length} ventana(s) por descargar, una a la vez`
+        : `parcela ${parcela.id}: serie de ${ANIOS} años ya guardada, nada que descargar`);
       let hechas = 0, fallas = 0, ultimoError = '';
       for (const v of pendientes) {
         estados.set(parcela.id, { estado: 'consultando', avance: `${hechas + fallas + 1} de ${pendientes.length}`, en: new Date() });

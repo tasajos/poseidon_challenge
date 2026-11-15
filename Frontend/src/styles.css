@@ -1062,3 +1062,62 @@ html.ligero .stat:hover { transform: none; }
   .admin-perfil-btn { padding: 5px; }
   .modo-ligero { padding: 6px 10px; font-size: 12px; line-height: 1.15; max-width: 118px; }
 }
+
+/* ---------- NASA en vivo (agricultor) ---------- */
+.nasa-barra { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 16px; padding: 14px 16px; margin-bottom: 14px; }
+.nasa-barra .principal { width: auto; margin: 0; flex: none; }
+.nasa-parcela { margin: 0; display: flex; flex-direction: column; gap: 2px; min-width: 200px; }
+.nasa-parcela b { font-size: 18px; }
+.nasa-hora { margin: 0; flex: 1 1 220px; font-size: 13px; }
+.nasa-stats { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+.nasa-stats .stat small { line-height: 1.35; margin-top: 2px; }
+.nasa-rejilla { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 16px; align-items: start; margin-bottom: 16px; }
+.nasa-rejilla .viz-lienzo { max-width: none; }
+.nasa-lateral { display: grid; gap: 16px; min-width: 0; }
+.nasa-coord { font-size: 12px; margin: 6px 0 0; font-variant-numeric: tabular-nums; }
+.nasa-fuentes summary { cursor: pointer; font-weight: 700; }
+.nasa-fuentes ul { margin: 10px 0 0 18px; display: grid; gap: 6px; font-size: 14px; }
+
+.consola-nasa { padding-bottom: 12px; }
+.consola-cabeza { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.consola-cabeza h2 { margin: 0; }
+.consola-estado { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; color: var(--suave); }
+.consola-estado::before { content: ''; width: 9px; height: 9px; border-radius: 50%; background: var(--suave); }
+.consola-estado.activa { color: var(--azul); }
+.consola-estado.activa::before { background: #2fae5b; animation: consola-latido 1.6s ease-in-out infinite; }
+.consola-estado.caida { color: var(--vino); }
+.consola-estado.caida::before { background: var(--vino); }
+@keyframes consola-latido { 50% { opacity: .25; } }
+.consola-pantalla {
+  background: #0d1f16; color: #d4e5da; border-radius: 10px; padding: 10px 12px; height: 300px; overflow: auto;
+  font: 12px/1.55 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace; margin-top: 8px;
+}
+.consola-pantalla:focus-visible { outline: 3px solid var(--naranja); outline-offset: 2px; }
+.consola-linea { margin: 0; overflow-wrap: anywhere; }
+.consola-linea + .consola-linea { border-top: 1px solid rgba(255, 255, 255, .05); padding-top: 2px; margin-top: 2px; }
+.consola-hora, .consola-ms { color: #8fa89a; }
+.consola-fuente { font-weight: 700; }
+.consola-fuente.f-power { color: #f6c75c; }
+.consola-fuente.f-srtm { color: #9fdcae; }
+.consola-fuente.f-modis { color: #93c3ff; }
+.consola-tipo { font-weight: 700; }
+.consola-linea.ok .consola-tipo { color: #7fe0a0; }
+.consola-linea.cache { color: #aabdb1; }
+.consola-linea.cola .consola-tipo { color: #f6c75c; }
+.consola-linea.falla, .consola-linea.falla .consola-tipo { color: #ffa3a3; }
+.consola-vacia { color: #8fa89a; margin: 0; }
+.consola-pie { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.consola-pie .suave { flex: 1; font-size: 12px; }
+html.ligero .consola-estado.activa::before { animation: none; }
+@media (prefers-reduced-motion: reduce) { .consola-estado.activa::before { animation: none; } }
+@media (max-width: 1024px) {
+  .nasa-rejilla { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 560px) {
+  .nasa-barra .principal { width: 100%; }
+  .nasa-stats { grid-template-columns: 1fr 1fr; }
+  .consola-pantalla { height: 240px; font-size: 11px; }
+  /* La gráfica se reduce a ~55 %: el texto del SVG se agranda para leerse a unos 10 px */
+  .nasa-rejilla .viz-eje { font-size: 18px; }
+  .nasa-rejilla .viz-etiqueta { font-size: 18px; }
+}
