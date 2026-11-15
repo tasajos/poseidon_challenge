@@ -236,6 +236,19 @@ npm install
 npm run dev
 ```
 
+**Frontend en desarrollo:**
+- **Arranca el backend solo**: si al hacer `npm run dev` en `Frontend/` el backend no responde en el 3001, Vite lo
+  arranca en segundo plano (registro en `Backend/backend-dev.log`). `POSEIDON_SIN_BACKEND=1` lo desactiva.
+- **Red local**: Vite escucha en todas las interfaces; desde otro equipo de la misma red abra la dirección que muestra
+  en *Network* (por ejemplo `http://192.168.1.136:5173`). También admite túneles (VS Code dev tunnels, Cloudflare, ngrok).
+- **Cuentas de demostración**: los botones de la pantalla de ingreso completan el correo de cada rol. Para entrar con
+  un toque en una demostración local, copie `Frontend/.env.example` como `Frontend/.env.local` y defina
+  `VITE_CLAVE_DEMO`. No lo haga en un servidor compartido: la clave queda visible en la página.
+
+**Diseño:** la identidad visual (emblema, barra lateral verde, cabecera por panel, pantalla de ingreso) viene de la
+rama `frontend3`. Los componentes están en `Frontend/src/identidad.jsx`, `App.jsx` y `paginas/Login.jsx`; los estilos
+del ingreso, en `Frontend/src/login.css`, que solo se descarga en esa pantalla.
+
 Pruebas del motor: `cd Backend && npm test`.
 
 Los usuarios de demostración están en `Database/usuarios_demo.json`; su contraseña es el valor de `DEMO_PASSWORD`.

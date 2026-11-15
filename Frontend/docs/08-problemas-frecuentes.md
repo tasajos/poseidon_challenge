@@ -14,14 +14,14 @@ Qué hacer cuando algo no sale como se espera. Busque el síntoma que tiene.
 | *Su cuenta está pendiente de aprobación* | Las cuentas de técnico, monitoreo y administrador deben ser aprobadas. Avise al administrador |
 | *Demasiados intentos. Espere unos minutos.* | Espere 15 minutos e intente de nuevo |
 | Olvidé mi contraseña | Poseidon todavía no tiene recuperación automática. Pida ayuda al administrador |
-| La página me saca y me pide ingresar de nuevo | La sesión dura 12 horas o hasta cerrar la pestaña. Vuelva a ingresar |
+| La página me saca y me pide ingresar de nuevo | La sesión dura hasta cerrar la pestaña (o 12 horas si marcó *Recordar sesión*). Vuelva a ingresar |
 | Aparece una página de Microsoft: *"Está a punto de conectarse a un túnel de desarrollador"* | Es normal cuando Poseidon se comparte por un túnel. Pulse **Continuar** |
 
 ## La página se ve en blanco o no termina de cargar
 
 1. Recargue la página: **Ctrl + F5** en la computadora, o deslice hacia abajo en el teléfono.
 2. Revise su conexión a internet.
-3. Si su señal es débil, active **Modo bajo consumo** (botón de la cabecera).
+3. Si su señal es débil, active **Modo bajo consumo** (botón de la barra verde de arriba).
 4. Si sigue en blanco, avise al administrador: puede que el servidor esté apagado.
 
 ## No veo una sección o un botón que otro usuario sí ve

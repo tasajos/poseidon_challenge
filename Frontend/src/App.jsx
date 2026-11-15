@@ -1,7 +1,10 @@
-import { lazy, Suspense, useEffect, useLayoutEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { api, hayToken, setToken } from './api.js';
-import { Logo, ModoLigero, puede } from './componentes.jsx';
-import Login from './paginas/Login.jsx';
+import { ModoLigero, puede } from './componentes.jsx';
+import { EmblemaPoseidon, Icono, ETIQUETA_ROL } from './identidad.jsx';
+import fondoCampo from './fondo-login.jpg';
+// La pantalla de ingreso (con su foto y estilos) se descarga solo si hace falta ingresar.
+const Login = lazy(() => import('./paginas/Login.jsx'));
 
 // Cada página se descarga cuando se abre: así la primera pantalla pesa poco (HU-USR-06).
 const Cliente = lazy(() => import('./paginas/Cliente.jsx'));
@@ -17,15 +20,15 @@ const Campo = lazy(() => import('./paginas/Campo.jsx'));
 // Cada vista exige al menos uno de sus permisos (el glosario, ninguno). El menú muestra solo las vistas permitidas;
 // el backend vuelve a comprobar cada permiso en cada petición.
 const MODULOS = [
-  { clave: 'finca', permisos: ['evaluar'], Panel: Cliente, menu: 'Mi finca', titulo: 'Mi finca', bajada: 'Registre su parcela y compare rotaciones' },
-  { clave: 'revision', permisos: ['revisar'], Panel: Operativo, menu: 'Asistencia técnica', titulo: 'Asistencia técnica', bajada: 'Sus parcelas asignadas, revisiones y visitas de campo' },
-  { clave: 'monitoreo', permisos: ['reportes'], Panel: Monitoreo, menu: 'Monitoreo', titulo: 'Monitoreo regional', bajada: 'Panorama por zona, escenarios de agua, adopción y suelo desnudo' },
-  { clave: 'alertas', permisos: ['alertas'], Panel: Alertas, menu: 'Alertas', titulo: 'Alertas climáticas', bajada: 'Avisos de helada y sequía en su teléfono' },
-  { clave: 'oferta', permisos: ['comprar'], Panel: Comprador, menu: 'Oferta sostenible', titulo: 'Oferta sostenible', bajada: 'Cosechas de rotaciones que cuidan el suelo y el agua' },
-  { clave: 'ventas', permisos: ['ofertar'], Panel: Ventas, menu: 'Mis ventas', titulo: 'Mis ventas', bajada: 'Publique su cosecha y responda a compradores locales' },
-  { clave: 'campo', permisos: ['incidencias'], Panel: Campo, menu: 'Plagas en campo', titulo: 'Plagas y enfermedades en campo', bajada: 'Marque incidencias con GPS y fotos desde el teléfono' },
-  { clave: 'admin', permisos: ['usuarios', 'respaldos', 'asignar'], Panel: Admin, menu: 'Administración', titulo: 'Administración', bajada: 'Usuarios, permisos, parcelas, respaldos y sistema' },
-  { clave: 'glosario', permisos: [], Panel: Glosario, menu: 'Glosario', titulo: 'Glosario y guía', bajada: 'Los términos científicos explicados con palabras sencillas y ejemplos' },
+  { clave: 'finca', icono: 'ubicacion', permisos: ['evaluar'], Panel: Cliente, menu: 'Mi finca', titulo: 'Mi finca', bajada: 'Registre su parcela y compare rotaciones' },
+  { clave: 'revision', icono: 'llave', permisos: ['revisar'], Panel: Operativo, menu: 'Asistencia técnica', titulo: 'Asistencia técnica', bajada: 'Sus parcelas asignadas, revisiones y visitas de campo' },
+  { clave: 'monitoreo', icono: 'barras', permisos: ['reportes'], Panel: Monitoreo, menu: 'Monitoreo', titulo: 'Monitoreo regional', bajada: 'Panorama por zona, escenarios de agua, adopción y suelo desnudo' },
+  { clave: 'alertas', icono: 'campana', permisos: ['alertas'], Panel: Alertas, menu: 'Alertas', titulo: 'Alertas climáticas', bajada: 'Avisos de helada y sequía en su teléfono' },
+  { clave: 'oferta', icono: 'canasta', permisos: ['comprar'], Panel: Comprador, menu: 'Oferta sostenible', titulo: 'Oferta sostenible', bajada: 'Cosechas de rotaciones que cuidan el suelo y el agua' },
+  { clave: 'ventas', icono: 'etiqueta', permisos: ['ofertar'], Panel: Ventas, menu: 'Mis ventas', titulo: 'Mis ventas', bajada: 'Publique su cosecha y responda a compradores locales' },
+  { clave: 'campo', icono: 'insecto', permisos: ['incidencias'], Panel: Campo, menu: 'Plagas en campo', titulo: 'Plagas y enfermedades en campo', bajada: 'Marque incidencias con GPS y fotos desde el teléfono' },
+  { clave: 'admin', icono: 'engranaje', permisos: ['usuarios', 'respaldos', 'asignar'], Panel: Admin, menu: 'Administración', titulo: 'Administración', bajada: 'Usuarios, permisos, parcelas, respaldos y sistema' },
+  { clave: 'glosario', icono: 'libro', permisos: [], Panel: Glosario, menu: 'Glosario', titulo: 'Glosario y guía', bajada: 'Los términos científicos explicados con palabras sencillas y ejemplos' },
 ];
 const INICIO = { cliente: 'finca', operativo: 'revision', monitoreo: 'monitoreo', administrador: 'admin', comprador: 'oferta' };
 
@@ -92,54 +95,121 @@ export default function App() {
     return () => window.removeEventListener('poseidon:glosario', ir);
   }, []);
 
-  function salir() { setToken(null); setUsuario(null); setActivo(null); }
+  function salir() { setToken(null); setUsuario(null); setActivo(null); setMenuPerfil(false); }
+
+  // Menú de perfil: se cierra al tocar fuera o con Escape.
+  const [menuPerfil, setMenuPerfil] = useState(false);
+  const perfil = useRef(null);
+  useEffect(() => {
+    if (!menuPerfil) return undefined;
+    const fuera = (e) => { if (!perfil.current?.contains(e.target)) setMenuPerfil(false); };
+    const tecla = (e) => { if (e.key === 'Escape') setMenuPerfil(false); };
+    document.addEventListener('pointerdown', fuera);
+    document.addEventListener('keydown', tecla);
+    return () => { document.removeEventListener('pointerdown', fuera); document.removeEventListener('keydown', tecla); };
+  }, [menuPerfil]);
+
   if (!listo) return <p className="cargando">Cargando…</p>;
-  if (!usuario) return <Login onIngreso={(r) => { setToken(r.token); setUsuario(r.usuario); }} />;
+  if (!usuario) {
+    return (
+      <Suspense fallback={<p className="cargando">Cargando…</p>}>
+        <Login onIngreso={(r) => { setToken(r.token, r.recordar); setUsuario(r.usuario); }} />
+      </Suspense>
+    );
+  }
 
   const modulos = modulosDe(usuario);
   const modulo = modulos.find((m) => m.clave === activo) || modulos[0];
+  const irA = (clave) => { setActivo(clave); setMenuPerfil(false); window.scrollTo({ top: 0 }); };
 
+  // Estructura del diseño Poseidón (rama frontend3): barra lateral verde con el emblema y las secciones
+  // del rol, y a la derecha un marco con la barra superior del panel.
   return (
     <ModoLigero.Provider value={ligero}>
-      <div className={`pagina rol-${usuario.rol}`}>
-        <header className="cabecera">
-          <div className="marca"><Logo /><span>Poseidon</span></div>
-          <div className="quien">
-            <button type="button" className={`modo-ligero ${ligero ? 'activo' : ''}`} aria-pressed={ligero} onClick={alternarLigero}
-              title="Muestra solo números y la tabla comparativa, sin mapas: gasta muy pocos datos móviles">
-              Modo bajo consumo{ligero ? ': activado' : ''}
-            </button>
-            <div><b>{usuario.nombre}</b><span className="insignia">{usuario.rol}</span></div>
-            <button className="salir" onClick={salir}>Salir</button>
+      <div className={`admin-layout rol-${usuario.rol}`} style={ligero ? undefined : { '--fondo-campo': `url(${fondoCampo})` }}>
+        <aside className="admin-sidebar">
+          <div className="admin-sidebar-marca">
+            <EmblemaPoseidon className="admin-logo-grande" variante="claro" />
+            <div className="admin-marca-titulos">
+              <span>Proyecto</span>
+              <strong>Poseidón</strong>
+            </div>
           </div>
-        </header>
-        {modulos.length > 1 && (
-          <nav className="modulos" aria-label="Secciones">
-            <div>
-              {modulos.map((m) => (
-                <button key={m.clave} className={m === modulo ? 'activa' : ''} aria-current={m === modulo ? 'page' : undefined}
-                  onClick={() => setActivo(m.clave)}>{m.menu}</button>
-              ))}
-            </div>
+
+          <nav className="admin-nav" aria-label="Secciones">
+            {modulos.map((m) => (
+              <button key={m.clave} type="button" className={`admin-nav-item ${m === modulo ? 'activo' : ''}`}
+                aria-current={m === modulo ? 'page' : undefined} onClick={() => irA(m.clave)}>
+                <span className="admin-nav-icono"><Icono nombre={m.icono} /></span>
+                <span>{m.menu}</span>
+              </button>
+            ))}
+            <button type="button" className="admin-nav-item salir-lateral" onClick={salir}>
+              <span className="admin-nav-icono"><Icono nombre="salir" /></span>
+              <span>Cerrar sesión</span>
+            </button>
           </nav>
-        )}
-        {modulo ? (
-          <>
-            <div className="titulo-panel">
-              <h1>{modulo.titulo}</h1>
-              <p>{modulo.bajada}</p>
+
+          <div className="admin-sidebar-campo" aria-hidden="true">
+            <svg className="admin-sidebar-olas" viewBox="0 0 300 90" preserveAspectRatio="none">
+              <path d="M0,30 C90,75 190,10 300,55 L300,90 L0,90 Z" fill="rgba(125, 179, 86, 0.78)" />
+              <path d="M0,55 C110,90 210,35 300,70 L300,90 L0,90 Z" fill="#0f3822" />
+            </svg>
+          </div>
+        </aside>
+
+        <div className="admin-contenido">
+          <div className="admin-marco">
+            <header className="admin-topbar cabecera">
+              <div className="admin-topbar-izq">
+                <EmblemaPoseidon className="admin-logo-chico" variante="claro" />
+                <h1>{modulo ? modulo.titulo : 'Poseidón'}</h1>
+              </div>
+              <div className="admin-topbar-der">
+                <button type="button" className={`modo-ligero ${ligero ? 'activo' : ''}`} aria-pressed={ligero} onClick={alternarLigero}
+                  title="Muestra solo números y la tabla comparativa, sin mapas: gasta muy pocos datos móviles">
+                  Modo bajo consumo{ligero ? ': activado' : ''}
+                </button>
+                <div className="admin-perfil" ref={perfil}>
+                  <button type="button" className="admin-perfil-btn" aria-expanded={menuPerfil} aria-haspopup="menu"
+                    onClick={() => setMenuPerfil((v) => !v)}>
+                    <span className="admin-avatar"><Icono nombre="persona" /></span>
+                    <span className="admin-perfil-nombre">{usuario.nombre}</span>
+                    <Icono nombre="bajar" className="admin-chevron" />
+                  </button>
+                  {menuPerfil && (
+                    <div className="admin-perfil-menu" role="menu">
+                      <div className="admin-perfil-info">
+                        <strong>{usuario.nombre}</strong>
+                        <small>{usuario.email}</small>
+                        <span className="admin-rol-badge">{ETIQUETA_ROL[usuario.rol] || usuario.rol}</span>
+                      </div>
+                      <button type="button" role="menuitem" onClick={() => irA('glosario')}>Glosario y guía</button>
+                      <button type="button" role="menuitem" className="admin-menu-salir" onClick={salir}>Cerrar sesión</button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </header>
+
+            <div className="admin-cuerpo">
+              {modulo ? (
+                <>
+                  <p className="admin-bajada">{modulo.bajada}</p>
+                  <main>
+                    <Suspense fallback={<p className="cargando">Cargando…</p>}>
+                      <modulo.Panel key={`${modulo.clave}-${ligero ? 'l' : 'c'}`} usuario={usuario}
+                        pedido={modulo.clave === 'glosario' ? pedidoGlosario : undefined} />
+                    </Suspense>
+                  </main>
+                </>
+              ) : (
+                <main><p className="vacio">Su rol no tiene vistas asignadas. Pida al administrador que le otorgue permisos.</p></main>
+              )}
             </div>
-            <main>
-              <Suspense fallback={<p className="cargando">Cargando…</p>}>
-                <modulo.Panel key={`${modulo.clave}-${ligero ? 'l' : 'c'}`} usuario={usuario}
-                  pedido={modulo.clave === 'glosario' ? pedidoGlosario : undefined} />
-              </Suspense>
-            </main>
-          </>
-        ) : (
-          <main><p className="vacio">Su rol no tiene vistas asignadas. Pida al administrador que le otorgue permisos.</p></main>
-        )}
-        <footer>Poseidon apoya la decisión; no reemplaza el criterio del agricultor ni de un técnico local. Datos: NASA POWER, SRTM y MODIS.</footer>
+            <footer>Poseidón apoya la decisión; no reemplaza el criterio del agricultor ni de un técnico local. Datos: NASA POWER, SRTM y MODIS.</footer>
+          </div>
+        </div>
       </div>
     </ModoLigero.Provider>
   );

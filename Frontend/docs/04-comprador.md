@@ -71,7 +71,7 @@ Las ofertas aparecen **ordenadas por uso eficiente del agua**: primero las que n
 
 Todos los filtros se aplican **juntos** y el resultado se actualiza al instante.
 
-- **Cultivo**: toque uno o varios nombres (se ponen azules). El número junto a cada nombre indica cuántas ofertas hay.
+- **Cultivo**: toque uno o varios nombres (se ponen verdes). El número junto a cada nombre indica cuántas ofertas hay.
   Toque de nuevo para quitarlo.
 - **Prácticas de rotación aplicadas**: encienda los interruptores de las prácticas que exige. **Se piden todas las
   que encienda a la vez.** Si enciende tres, solo verá ofertas que cumplan las tres.

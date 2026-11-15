@@ -308,12 +308,3 @@ export function Estrategia({ e, adoptada, onAdoptar, validaciones }) {
   );
 }
 
-export function Logo() {
-  return (
-    <svg className="logo" viewBox="0 0 40 40" aria-hidden="true">
-      <circle cx="20" cy="20" r="20" fill="#FAC748" />
-      <path d="M20 9c5 5 7 9 7 13a7 7 0 0 1-14 0c0-4 2-8 7-13z" fill="#1E4E8C" />
-      <path d="M8 29c4-3 8-3 12 0s8 3 12 0" fill="none" stroke="#7A1F3D" strokeWidth="3" strokeLinecap="round" />
-    </svg>
-  );
-}

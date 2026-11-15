@@ -1,15 +1,23 @@
 const BASE = import.meta.env.VITE_API_URL || '';
 const CLAVE = 'poseidon_token';
 
+// La sesión vive en sessionStorage (se borra al cerrar la pestaña) o, con "Recordar sesión", en localStorage
+// (sigue abierta al volver, hasta que vence a las 12 horas o se pulsa Cerrar sesión).
 let token = null;
-try { token = sessionStorage.getItem(CLAVE); } catch { /* sin almacenamiento */ }
+try { token = sessionStorage.getItem(CLAVE) || localStorage.getItem(CLAVE); } catch { /* sin almacenamiento */ }
 
 export const hayToken = () => Boolean(token);
-export function setToken(nuevo) {
+export function setToken(nuevo, recordar = false) {
   token = nuevo;
   try {
-    if (nuevo) sessionStorage.setItem(CLAVE, nuevo);
-    else { sessionStorage.removeItem(CLAVE); sessionStorage.removeItem('poseidon_resumen'); }
+    if (nuevo) {
+      (recordar ? localStorage : sessionStorage).setItem(CLAVE, nuevo);
+      (recordar ? sessionStorage : localStorage).removeItem(CLAVE);
+    } else {
+      sessionStorage.removeItem(CLAVE);
+      localStorage.removeItem(CLAVE);
+      sessionStorage.removeItem('poseidon_resumen');
+    }
   } catch { /* idem */ }
 }
 

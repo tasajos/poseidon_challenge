@@ -29,7 +29,7 @@ historial quede guardado en un solo lugar.
 
 1. En el menú, toque **Mi finca**.
 2. Toque la pestaña **Mis parcelas**.
-3. Pulse el botón naranja **+ Registrar parcela**.
+3. Pulse el botón verde oscuro **+ Registrar parcela**.
 
 El registro tiene **tres pasos**, que se ven numerados arriba: **1 Ubicación → 2 Datos → 3 Confirmar**.
 
@@ -208,7 +208,7 @@ Pulse **Comparar rotaciones** y espere unos segundos (dice *"Consultando datos�
 - **Cambio mayor**: una rotación distinta.
 
 Filas de la tabla:
-- **Puntaje (0-100)**: la nota general, según lo que usted marcó como importante. El más alto aparece en azul.
+- **Puntaje (0-100)**: la nota general, según lo que usted marcó como importante. El más alto aparece en verde y más grande.
 - **Agua, Heladas, Suelo, Ingreso, Forraje**: la nota de cada tema por separado.
 - **Riego necesario (mm)**: el agua que tendría que poner con riego en una campaña. **Menos es mejor.**
   1 mm = 1 litro por metro cuadrado.
@@ -241,7 +241,7 @@ El técnico asignado revisa cada comparación y deja una **nota**. Para verla:
 
 ## 4. Modo bajo consumo: el resumen rápido
 
-Si activó **Modo bajo consumo** (en la cabecera), en *Mi finca* aparece primero la pestaña **Resumen rápido**: cada
+Si activó **Modo bajo consumo** (en la barra verde de arriba), en *Mi finca* aparece primero la pestaña **Resumen rápido**: cada
 parcela con la tabla de su última comparación, solo en números. Carga en pocos segundos aun con señal débil.
 Pulse **Volver a comparar** para hacer una comparación nueva.
 
@@ -258,7 +258,7 @@ Poseidon revisa sus parcelas **cada 6 horas** con datos de la NASA y le avisa si
 
 ### Configurar las alertas
 1. En el menú, toque **Alertas**.
-2. En **Qué alertas recibir**, deje encendidos (en azul) los interruptores de **Helada** y **Sequía severa** que
+2. En **Qué alertas recibir**, deje encendidos (en verde) los interruptores de **Helada** y **Sequía severa** que
    quiera recibir.
 3. En **Cómo recibirlas**:
    - **Notificación web**: un aviso en la pantalla del teléfono o la computadora.

@@ -6,3 +6,5 @@ Backend/respaldos/
 Backend/.vapid.json
 Backend/fotos/
 Backend/credenciales/
+Backend/backend-dev.log
+Frontend/.env.local

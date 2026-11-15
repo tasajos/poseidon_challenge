@@ -33,11 +33,23 @@ recibir notificaciones.
 
 ## 3. Ingresar
 
-En la pantalla de ingreso:
+La pantalla de ingreso tiene, a la izquierda, el nombre **Proyecto Poseidón** sobre una foto de cultivos, y a la
+derecha un recuadro que dice **Bienvenida**. En ese recuadro:
 
-1. En **Correo**, escriba el correo de su cuenta.
-2. En **Contraseña**, escriba su contraseña.
-3. Pulse el botón naranja **Ingresar**.
+1. En la casilla **Correo electrónico** (con el dibujo de un sobre), escriba el correo de su cuenta.
+2. En la casilla **Contraseña** (con el dibujo de un candado), escriba su contraseña. Para comprobar lo que escribió,
+   toque el **ojo** a la derecha: la contraseña se muestra; tóquelo otra vez para ocultarla.
+3. **Recordar sesión** (opcional): márquelo solo en **su propio** teléfono o computadora. Así no tendrá que volver a
+   ingresar cada vez que abra Poseidon. **No lo marque en un equipo compartido.**
+4. Pulse el botón verde oscuro **Ingresar**.
+
+**¿Olvidó su contraseña?** Toque **¿Olvidaste tu contraseña?**. Poseidon todavía no puede recuperarla solo: pida al
+administrador que le restablezca el acceso.
+
+**Cuentas de demostración.** Debajo del botón hay cinco botones con dibujos (*Cliente / Agricultor*, *Administrador de
+Sistema*, *Operativo / Técnico*, *Monitoreo / Supervisor*, *Comprador / Cooperativa*). Sirven para **probar** Poseidon
+con las cuentas de ejemplo: al tocar uno, se completa el correo de esa cuenta y usted solo escribe la contraseña de
+demostración que le dio el administrador. **Para su trabajo real, use siempre su propia cuenta.**
 
 Si algo sale mal, aparece un mensaje en rojo debajo del botón:
 
@@ -47,26 +59,36 @@ Si algo sale mal, aparece un mensaje en rojo debajo del botón:
 | *Su cuenta está pendiente de aprobación* | Su cuenta aún no fue aprobada | Espere a que un responsable la apruebe |
 | *Demasiados intentos. Espere unos minutos.* | Se equivocó muchas veces seguidas (más de 20 en 15 minutos) | Espere 15 minutos e intente de nuevo |
 
-**¿Cuánto dura la sesión?** Hasta 12 horas, o hasta que cierre la pestaña del navegador. Después tendrá que
-volver a ingresar. Así, si alguien toma su teléfono más tarde, no encuentra su cuenta abierta.
+**¿Cuánto dura la sesión?**
+- **Sin "Recordar sesión"**: hasta que cierre la pestaña del navegador (como máximo 12 horas). Así, si alguien toma
+  su teléfono más tarde, no encuentra su cuenta abierta.
+- **Con "Recordar sesión"**: sigue abierta aunque cierre el navegador, hasta 12 horas o hasta que pulse
+  **Cerrar sesión**.
+
+Después tendrá que volver a ingresar.
 
 ## 4. Cómo está organizada la pantalla
 
-De arriba hacia abajo:
+**En la computadora**, la pantalla tiene dos partes:
 
-1. **La franja azul superior (cabecera).** A la izquierda, el logo de Poseidon. A la derecha:
-   - El botón **Modo bajo consumo** (ver más abajo).
-   - Su **nombre** y una etiqueta de color con su **rol**.
-   - El botón **Salir**, para cerrar su sesión.
-2. **El menú de secciones**, una franja azul oscuro con los nombres de las secciones que su rol puede usar (por
-   ejemplo *Mi finca*, *Alertas*, *Glosario*). Toque un nombre para ir a esa sección. La sección abierta queda
-   subrayada en amarillo. En el teléfono, si no caben todos, deslice la franja con el dedo hacia la izquierda.
-3. **El título de la sección**, con una línea que explica para qué sirve.
-4. **Los recuadros con números** (por ejemplo *Parcelas registradas: 2*), que resumen lo más importante.
-5. **Las pestañas**: algunas secciones tienen varias partes. Aparecen como palabras subrayadas debajo de los
-   recuadros con números (por ejemplo *Mis parcelas · Comparar rotaciones · Mis evaluaciones*). La pestaña abierta
-   queda subrayada en naranja.
-6. **El contenido** de la pestaña elegida.
+1. **La barra verde de la izquierda (menú lateral).** Arriba, el emblema de Poseidón (un tridente con hojas y agua).
+   Debajo, **las secciones que su rol puede usar**, cada una con un dibujo (por ejemplo *Mi finca*, *Alertas*,
+   *Glosario*). Toque una para abrirla: la sección abierta queda resaltada en verde claro. Al final está
+   **Cerrar sesión**.
+2. **El recuadro grande de la derecha**, con:
+   - **La barra verde de arriba**, con el **nombre de la sección** a la izquierda y, a la derecha, el botón
+     **Modo bajo consumo** (ver más abajo) y un botón redondo con **su nombre**. Al tocar su nombre se abre un
+     pequeño menú con su correo, su **rol** y las opciones *Glosario y guía* y *Cerrar sesión*.
+   - **Una línea gris** que explica para qué sirve la sección.
+   - **Los recuadros con números** (por ejemplo *Parcelas registradas: 2*), que resumen lo más importante.
+   - **Las pestañas**: algunas secciones tienen varias partes. Aparecen como palabras debajo de los recuadros con
+     números (por ejemplo *Mis parcelas · Comparar rotaciones · Mis evaluaciones*). La pestaña abierta queda
+     subrayada en verde.
+   - **El contenido** de la pestaña elegida.
+
+**En el teléfono**, el menú lateral pasa **arriba**: primero el emblema y el nombre Poseidón, y debajo las secciones
+en una sola fila. **Si no ven todas, deslice esa fila con el dedo hacia la izquierda.** En la barra verde de la
+sección, su nombre se reemplaza por un **círculo con una silueta**: tóquelo para ver su rol y cerrar sesión.
 
 **Si un botón está gris y no responde**, falta completar algo antes (por ejemplo, un campo obligatorio) o el
 sistema está trabajando. Cuando dice *"Guardando…"* o *"Consultando…"*, espere sin volver a pulsar.
@@ -78,12 +100,13 @@ sistema está trabajando. Cuando dice *"Guardando…"* o *"Consultando…"*, esp
 
 ## 5. Modo bajo consumo (para señal débil)
 
-Si su internet es lento o tiene pocos datos en el teléfono, pulse **Modo bajo consumo** en la cabecera. El botón
-se pone amarillo y dice *"Modo bajo consumo: activado"*.
+Si su internet es lento o tiene pocos datos en el teléfono, pulse **Modo bajo consumo** en la barra verde de arriba
+de la sección. El botón se pone amarillo y dice *"Modo bajo consumo: activado"*.
 
 En este modo:
 - **No se cargan los mapas** (son lo que más datos gasta). En su lugar aparece un recuadro que dice
   *"Mapa oculto en modo de bajo consumo"*. Donde haría falta tocar el mapa, puede escribir las coordenadas.
+- **No se cargan las fotos de fondo** de la pantalla de ingreso ni del menú lateral.
 - El agricultor ve una pestaña nueva, **Resumen rápido**, con la tabla que compara sus tres rotaciones en números.
 - Se usan las letras propias del teléfono y no se descargan otras.
 
@@ -106,9 +129,11 @@ un pequeño círculo con un **?**.
 
 La sección *Glosario* tiene además una **Guía rápida: cómo leer su comparación**, en cuatro pasos.
 
-## 7. Salir
+## 7. Cerrar sesión
 
-Pulse **Salir** en la cabecera. Hágalo siempre si usa una computadora o un teléfono que comparte con otras personas.
+Pulse **Cerrar sesión** al final del menú lateral, o toque su nombre en la barra verde y elija **Cerrar sesión**.
+Hágalo siempre si usa una computadora o un teléfono que comparte con otras personas, y siempre que haya marcado
+*Recordar sesión*.
 
 ---
 

@@ -49,7 +49,7 @@ ir al campo:
   **GAMC**, con fecha. Si una fuente **falta** (por ejemplo, sin conexión con la NASA o sin capas del GAMC),
   aparece en rojo con la explicación. **Puede continuar con su observación de campo igual.**
 
-Desde la ficha, el botón naranja **Registrar una visita a esta parcela** lo lleva al formulario de visitas con la
+Desde la ficha, el botón verde oscuro **Registrar una visita a esta parcela** lo lleva al formulario de visitas con la
 parcela ya elegida.
 
 ---
