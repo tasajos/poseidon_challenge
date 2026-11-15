@@ -14,15 +14,17 @@ comprueba el permiso en cada petición, así que un cambio rige de inmediato, in
 
 | Permiso | Vista o acción | Por defecto |
 |---|---|---|
-| `evaluar` | Mi finca: comparar rotaciones de sus parcelas | cliente |
-| `ver_todas` | Ver parcelas y evaluaciones de todos (sin él, solo las propias) | operativo, monitoreo, administrador |
-| `revisar` | Revisión técnica: nota para el agricultor | operativo, administrador |
-| `reportes` | Monitoreo: tablero y reporte regional | operativo, monitoreo, administrador |
+| `evaluar` | Mi finca: registrar parcelas, comparar rotaciones, historial | cliente |
+| `ver_todas` | Ver parcelas y evaluaciones **individuales** de todos. Sin él: el técnico ve solo sus parcelas asignadas y el analista solo agregados | administrador |
+| `revisar` | Asistencia técnica: parcelas asignadas y nota para el agricultor | operativo, administrador |
+| `reportes` | Monitoreo regional: panorama por zona, escenarios, adopción y suelo desnudo | operativo, monitoreo, administrador |
 | `alertas` | Alertas climáticas en el teléfono | cliente, operativo, monitoreo |
 | `ofertar` | Mis ventas: publicar cosecha y responder a compradores | cliente |
 | `comprar` | Oferta sostenible: filtrar la oferta y enviar solicitudes | comprador |
 | `incidencias` | Plagas en campo: marcar incidencias con GPS y fotos | operativo |
-| `usuarios` | Usuarios, roles y permisos (fijo para el administrador) | administrador |
+| `usuarios` | Usuarios, roles, permisos y auditoría (fijo para el administrador) | administrador |
+| `asistencia` | Registrar visitas técnicas y validar estrategias con observaciones locales | operativo |
+| `asignar` | Asignar parcelas a los técnicos | administrador |
 | `respaldos` | Crear y restaurar respaldos | administrador |
 
 Roles: `cliente` es el **agricultor**; `comprador` es la **cooperativa o mercado local**. Un permiso nuevo llega a
@@ -30,6 +32,85 @@ una base existente con sus valores por defecto una sola vez (tabla `permisos_sem
 administrador en los demás.
 
 La interfaz es responsive (escritorio y teléfono). Paleta: azul, naranja, amarillo y vino; tipografía Nunito.
+
+Al actualizar una base anterior a estos cambios, `ver_todas` se retira **una sola vez** a los roles operativo y
+monitoreo (lo piden HU-OPT-01 y HU-MON-01); el administrador puede volver a otorgarlo desde su panel.
+
+## Registro de usuarios y auditoría
+
+En *Administración → Usuarios* el formulario pide nombre, correo (el identificador único de la cuenta), teléfono
+opcional, rol y contraseña inicial; marca los campos obligatorios y señala el campo con error. Las cuentas de
+**técnico, gestor y administrador quedan pendientes**: no pueden ingresar hasta que un responsable las aprueba.
+Si hay otro administrador activo, quien registró la cuenta no puede aprobarla (doble control); con un solo
+administrador puede hacerlo, y la auditoría lo señala. Subir una cuenta a un rol con privilegios también la deja pendiente.
+
+*Administración → Auditoría* lista registros, aprobaciones, cambios de rol y de permisos, asignaciones de parcelas
+y restauraciones, con quién y cuándo. Nunca guarda contraseñas ni credenciales.
+
+## Parcelas, terreno e historial
+
+En *Mi finca → Mis parcelas* el agricultor registra su parcela en tres pasos:
+
+1. **Ubicación**: busca su zona, marca un punto, **dibuja el perímetro** tocando cada esquina, usa el GPS o escribe
+   las coordenadas.
+2. **Datos**: nombre, cultivo actual, superficie (la del perímetro, si lo dibujó), etapa y riego. Lo que no sabe queda
+   como "no disponible".
+3. **Resumen** para confirmar o corregir. Al guardar recibe un identificador (`PAR-00001`).
+
+Cada parcela se asigna sola al técnico con menos carga (el administrador puede reasignarla) y su ficha muestra:
+
+- **Pendiente y erosión** (HU-USR-05) con el modelo de elevación **SRTM de la NASA** (30 m): porcentaje de pendiente,
+  alerta de erosión y cultivos de cobertura sugeridos. En ladera, la comparación de rotaciones premia las raíces
+  profundas y castiga los meses de suelo desnudo.
+- **Historial** (HU-USR-02): campañas pasadas con su rendimiento, comparaciones anteriores y una gráfica del **NDVI de
+  MODIS** (250 m) por año, en época húmeda y seca.
+- **De dónde sale cada dato**: lo que declaró el agricultor, lo que aportan NASA y GAMC, con fecha, y qué falta.
+
+El NDVI se pide a la NASA (ORNL DAAC) **en segundo plano**, porque cada consulta tarda decenas de segundos; se guarda
+en la base y la ficha se actualiza sola. La elevación usa por defecto el servicio público OpenTopoData, que publica
+SRTM: las coordenadas de la parcela se envían a ese servicio (`ELEVACION_URL` lo cambia o lo desactiva).
+
+### Modo de bajo consumo
+
+El botón **Modo bajo consumo** de la cabecera (se activa solo si el teléfono pide ahorrar datos o está en 2G) quita
+mapas y tarjetas y deja el resumen numérico con la tabla comparativa de las 3 estrategias. En ese modo no se descargan
+Leaflet, mosaicos ni tipografías, y en producción un service worker guarda la aplicación en el teléfono.
+Medido con la compilación de producción y una conexión simulada:
+
+| Conexión | Primera carga | Visitas siguientes |
+|---|---|---|
+| 3G lento (400 kbit/s, 400 ms de latencia) | 3,4 s | 0,9 s |
+| 3G (1,6 Mbit/s, 150 ms) | 1,1 s | 0,3 s |
+
+La primera carga en 3G lento no baja de 2 s: son cuatro idas y vueltas al servidor con 400 ms de latencia cada una.
+
+## Asistencia técnica
+
+- **Mis parcelas**: el técnico ve solo las que tiene asignadas, con su ficha agroclimática y las observaciones previas.
+- **Revisión**: en la tabla comparativa de cada evaluación escribe su **observación local** por estrategia
+  (disponibilidad de semilla, cuidados para la zona); el agricultor la ve en su evaluación. *Validaciones* guarda el
+  historial por zona o distrito.
+- **Visitas**: fecha, agricultor visitado (el dueño de la parcela) y observaciones, con resumen por período y
+  exportación a CSV para Excel.
+
+## Monitoreo regional
+
+Sin el permiso `ver_todas`, el tablero solo muestra **agregados por zona**: las zonas con menos de 3 productores se
+juntan en un grupo y, si siguen siendo pocos, sus valores no se publican. Cada indicador indica fuente, período, escala
+y si es observado, estimado, declarado o simulado.
+
+- **Panorama**: mapa y tabla por zona (riego medio, índice de agua, heladas, laderas, plagas activas).
+- **Escenarios de agua**: controles de lluvia (−60 a +20 %) y temperatura (0 a +5 °C) que recalculan al moverlos el
+  riego adicional de la campaña octubre-marzo respecto de hoy. Es una simulación, no una proyección.
+- **Adopción**: porcentaje de productores que marcaron que aplicarán una estrategia recomendada, con el ahorro de
+  riego estimado y el NDVI medio de la zona.
+- **Suelo desnudo**: porcentaje de parcelas con NDVI menor que 0,2 por año y época, y exportación del listado de
+  zonas prioritarias.
+
+**Capas del GAMC.** Con `GAMC_WMS_URL` y `GAMC_WMS_CAPAS` el mapa superpone los límites distritales del servicio WMS
+municipal; si no están configurados o el servicio no responde, el tablero lo avisa y sigue funcionando. Para agrupar
+las parcelas por **distrito oficial**, copie los polígonos como GeoJSON en `Database/distritos.geojson`; sin ese
+archivo la zona es el municipio más cercano (aproximado).
 
 ## Respaldos
 
@@ -110,6 +191,12 @@ muestra a través del backend, así que no hace falta compartirlas con cada usua
 comprueba la conexión. Sin estas variables las fotos se guardan en `Backend/fotos/` (solo para pruebas) y la
 interfaz lo avisa.
 
+### Sello de Gestión Hídrica Sostenible
+
+Una oferta lleva el sello cuando su rotación necesita al menos un **15 % menos de riego** que la rotación tradicional
+(papa → maíz) en el mismo lugar, y muestra ese porcentaje. Es una estimación con el clima típico de NASA POWER:
+**no usa todavía SMAP ni ECOSTRESS** (requieren acceso con cuenta Earthdata) y no mide el agua realmente aplicada.
+
 ## Glosario y guía
 
 Los indicadores de la interfaz (lluvia, evapotranspiración, mínima, mes seco, riego necesario, suelo desnudo,
@@ -118,15 +205,15 @@ cuadro con la explicación en lenguaje cotidiano, un apoyo visual (escala o barr
 cómo lo usa Poseidon y la fuente del dato. En el teléfono el cuadro aparece como hoja inferior.
 
 La vista *Glosario* (visible para todos los roles, sin permiso) reúne todos los términos con buscador, filtro por
-tema y una guía rápida para leer la comparación. Incluye NDVI y humedad del suelo (SMAP) marcados como
-“aún no se usa”, porque son índices satelitales comunes que Poseidon todavía no calcula.
+tema y una guía rápida para leer la comparación. Incluye la humedad del suelo (SMAP) marcada como
+“aún no se usa”, porque es un índice satelital común que Poseidon todavía no incorpora.
 Los textos están en `Frontend/src/glosario.js`.
 
 ## Estructura
 
 | Carpeta | Contenido |
 |---|---|
-| `Backend/` | API Node.js + Express: cliente NASA POWER, indicadores de clima y motor de rotación |
+| `Backend/` | API Node.js + Express: clientes de NASA POWER, SRTM y MODIS, indicadores de clima, motor de rotación y agregados regionales |
 | `Database/` | Esquema MySQL y catálogo de cultivos |
 | `Frontend/` | React + Vite con mapa (Leaflet) y comparación de estrategias |
 
@@ -165,11 +252,25 @@ Todas las rutas, salvo el ingreso, requieren `Authorization: Bearer <token>`.
 | POST | `/api/auth/login` | público | Ingreso; devuelve el usuario con sus permisos |
 | GET | `/api/auth/yo` | sesión | Usuario y permisos vigentes |
 | GET | `/api/cultivos`, `/api/clima?lat=&lon=` | sesión | Catálogo e indicadores de clima |
-| POST | `/api/evaluar` | evaluar | Compara rotaciones y guarda la evaluación |
-| GET | `/api/evaluaciones`, `/api/evaluaciones/:id` | sesión | Sin `ver_todas`, solo las propias; `?propias=1` las pide aunque lo tenga |
+| POST | `/api/evaluar` | evaluar | Compara rotaciones de una parcela registrada (`parcela_id`) o de un punto (`lat`, `lon`) y guarda la evaluación |
+| GET | `/api/evaluaciones`, `/api/evaluaciones/:id` | sesión | Con `ver_todas`, todas; el técnico, las de sus parcelas asignadas; los demás, las propias |
+| PATCH | `/api/evaluaciones/:id/adopcion` | evaluar | El agricultor marca la estrategia que aplicará |
+| POST | `/api/evaluaciones/:id/validaciones` | asistencia | Observación local del técnico sobre una estrategia |
 | PATCH | `/api/evaluaciones/:id/revision` | revisar | Marca como revisada con una nota |
-| GET | `/api/monitoreo` | reportes | Totales, alertas y actividad |
-| GET, POST, PATCH | `/api/usuarios` | usuarios | Gestión de usuarios |
+| GET | `/api/monitoreo?anio=&epoca=` | reportes | Agregados por zona; con `ver_todas`, también el detalle por parcela |
+| GET | `/api/monitoreo/escenario?lluvia=&temp=` | reportes | Escenario de estrés hídrico por zona |
+| GET | `/api/monitoreo/suelo-desnudo.csv` | reportes | Zonas prioritarias por suelo desnudo (CSV) |
+| GET, POST, PATCH | `/api/usuarios` | usuarios | Gestión de usuarios; las cuentas con privilegios nacen pendientes |
+| POST | `/api/usuarios/:id/aprobacion` | usuarios | Aprueba o rechaza una cuenta pendiente (`{ "aprobar": true }`) |
+| GET | `/api/auditoria` | usuarios | Registro de auditoría |
+| GET, POST | `/api/parcelas` | sesión / evaluar | Lista (`?alcance=asignadas\|todas`) y registra; `?validar=1` devuelve el resumen sin guardar |
+| GET, PATCH | `/api/parcelas/:id` | dueño, técnico asignado o `ver_todas` | Ficha completa; corrige los datos declarados |
+| POST, DELETE | `/api/parcelas/:id/ciclos` | evaluar | Campañas pasadas de la parcela |
+| POST | `/api/parcelas/:id/ndvi` | sesión | Pide en segundo plano el NDVI que falte |
+| PATCH | `/api/parcelas/:id/asignacion` | asignar | Asigna la parcela a un técnico |
+| GET | `/api/resumen` | evaluar | Resumen numérico para el modo de bajo consumo |
+| GET, POST | `/api/visitas`, `/api/visitas/exportar` | asistencia | Visitas técnicas, resumen y CSV |
+| GET | `/api/validaciones` | asistencia | Historial de validaciones por zona |
 | GET, PUT | `/api/permisos`, `/api/permisos/:rol` | usuarios | Matriz de permisos por rol |
 | GET | `/api/sistema` | usuarios o respaldos | Estado de base, respaldos y alertas |
 | GET, POST | `/api/respaldos` | respaldos | Lista y crea respaldos |
@@ -193,7 +294,11 @@ Todas las rutas, salvo el ingreso, requieren `Authorization: Bearer <token>`.
 ## Límites conocidos
 
 - Los valores del catálogo (Kc, ciclos, meses de siembra, valor de mercado) son referencias aproximadas y deben validarse con un agrónomo local.
-- No usa datos de suelo de la parcela ni imágenes satelitales (NDVI, SMAP); son los siguientes pasos naturales.
+- No usa datos de suelo de la parcela ni humedad del suelo (SMAP) o evapotranspiración (ECOSTRESS).
+- El NDVI de MODIS tiene píxeles de 250 m (suelen abarcar más que la parcela) y SRTM celdas de 30 m: orientan, no miden la parcela.
+- NASA POWER tiene cuadros de unos 50 km: en los escenarios, las zonas que comparten cuadro muestran el mismo valor.
+- Los indicadores regionales salen de las parcelas registradas en Poseidon, no de un barrido de todo el distrito.
+- La adopción de rotaciones es lo que declara el agricultor; no se verifica en campo.
 - El indicador de agua de la oferta es una estimación con el clima típico; no mide el riego realmente aplicado.
 - La zona de una oferta es el municipio cuyo centro está más cerca, no el límite municipal oficial.
 - Las incidencias de campo no avisan todavía a los agricultores cercanos; influyen en sus próximas evaluaciones.

@@ -62,7 +62,14 @@ function sanidad(cultivos, plagas) {
   return { castigo: Math.min(CASTIGO_MAX, castigo), afectadas };
 }
 
-export function evaluarRotacion(cultivos, clima, prioridades = {}, plagas = []) {
+// Rotación tradicional de los valles de Cochabamba: referencia para estimar el ahorro de agua (HU-CLI-04).
+export const TRADICIONAL = ['papa', 'maiz'];
+
+// terreno: { pendiente_pct, riesgo: 'bajo'|'medio'|'alto' } o null (HU-USR-05). En ladera, el suelo desnudo
+// se pierde con la lluvia y las raíces profundas lo sujetan: el puntaje de suelo lo refleja.
+const LADERA = { medio: 0.5, alto: 1 };
+
+export function evaluarRotacion(cultivos, clima, prioridades = {}, plagas = [], terreno = null) {
   const n = cultivos.length;
   const detalle = cultivos.map((c) => evaluarCultivo(c, clima));
   const deficit = media(detalle.map((d) => d.deficit_mm));
@@ -75,11 +82,13 @@ export function evaluarRotacion(cultivos, clima, prioridades = {}, plagas = []) 
   const diversidad = (familias.length / n) * (repite ? 0.5 : 1);
 
   const plaga = sanidad(cultivos, plagas);
+  const ladera = LADERA[terreno?.riesgo] || 0;
   const puntajes = {
     agua: limitar(100 * (1 - deficit / 800)),
     clima: limitar(100 * (1 - helada / 3)),
     suelo: limitar(100 * (0.35 * fraccion('fija_nitrogeno') + 0.35 * diversidad
-      + 0.15 * fraccion('raiz_profunda') + 0.15 * (1 - desnudos / 12)) - 2 * plaga.castigo),
+      + 0.15 * fraccion('raiz_profunda') + 0.15 * (1 - desnudos / 12)) - 2 * plaga.castigo
+      + ladera * (15 * fraccion('raiz_profunda') - 25 * (desnudos / 12))),
     ingreso: limitar((100 * (media(cultivos.map((c) => c.valor_mercado)) - 1)) / 2),
     forraje: limitar(100 * fraccion('forraje')),
   };
@@ -101,9 +110,10 @@ export function evaluarRotacion(cultivos, clima, prioridades = {}, plagas = []) 
       meses_suelo_desnudo: Math.round(desnudos * 10) / 10,
       familias, repite_familia: repite,
       plagas: plaga.afectadas,
+      ...(ladera ? { terreno: { pendiente_pct: terreno.pendiente_pct, riesgo: terreno.riesgo } } : {}),
     },
     detalle,
-    _crudo: { deficit, helada, desnudos, plagas: plaga.castigo },
+    _crudo: { deficit, helada, desnudos, plagas: plaga.castigo, profundas: fraccion('raiz_profunda') },
   };
 }
 
@@ -153,6 +163,9 @@ function explicar(alt, actual, cultivos, cultivosActuales) {
       : 'la exposición a las familias atacadas';
     porque.push(`Corta el ciclo de plagas reportadas por técnicos cerca de su parcela: evita ${texto}.`);
   }
+  if (alt.evidencia.terreno && (alt._crudo.profundas > actual._crudo.profundas || actual._crudo.desnudos - alt._crudo.desnudos >= 1)) {
+    porque.push(`Protege mejor la ladera (pendiente de ${alt.evidencia.terreno.pendiente_pct} %): ${alt._crudo.profundas > actual._crudo.profundas ? 'más raíces profundas que sujetan el suelo' : 'menos meses de suelo desnudo expuesto a la lluvia'}.`);
+  }
   if (!porque.length) porque.push('Puntaje parecido al de la rotación actual según sus prioridades.');
   return { porque, riesgos };
 }
@@ -174,6 +187,10 @@ function riesgosPropios(ev, cultivos) {
       ? `${donde}: ataca a las ${p.familia} y esta rotación las siembra dos campañas seguidas (${p.cultivos.join(', ')}), lo que alimenta la plaga.`
       : `${donde}: ataca a las ${p.familia} (${p.cultivos.join(', ')}); vigile la parcela y no repita esa familia.`);
   }
+  const t = ev.evidencia.terreno;
+  if (t && ev.evidencia.meses_suelo_desnudo >= 4) {
+    r.push(`Pendiente de ${t.pendiente_pct} % (riesgo de erosión ${t.riesgo}): el suelo queda ${ev.evidencia.meses_suelo_desnudo} meses desnudo y la lluvia puede arrastrarlo. Considere un cultivo de cobertura.`);
+  }
   r.push('Validar con un técnico agrícola local antes de cambiar la rotación.');
   return r;
 }
@@ -181,21 +198,31 @@ function riesgosPropios(ev, cultivos) {
 const limpiar = ({ _crudo, ...resto }) => resto;
 
 // Devuelve 3 estrategias: la actual, un ajuste (cambia un cultivo) y un cambio mayor.
-export function compararRotaciones(codigosActuales, catalogo, clima, prioridades = {}, plagas = []) {
+export function compararRotaciones(codigosActuales, catalogo, clima, prioridades = {}, plagas = [], terreno = null) {
   const porCodigo = new Map(catalogo.map((c) => [c.codigo, c]));
   const actuales = codigosActuales.map((k) => {
     if (!porCodigo.has(k)) throw new Error(`Cultivo desconocido: ${k}`);
     return porCodigo.get(k);
   });
   const n = actuales.length;
-  const evActual = evaluarRotacion(actuales, clima, prioridades, plagas);
+  // Ahorro de agua frente a la rotación tradicional en el mismo lugar (negativo si pide más riego).
+  const tradicional = TRADICIONAL.map((k) => porCodigo.get(k)).filter(Boolean);
+  const referencia = tradicional.length === TRADICIONAL.length ? evaluarRotacion(tradicional, clima)._crudo.deficit : 0;
+  const conAhorro = (ev) => {
+    if (referencia > 0) {
+      ev.evidencia.referencia_agua_mm = Math.round(referencia);
+      ev.evidencia.ahorro_agua_pct = Math.round(100 * (1 - ev._crudo.deficit / referencia));
+    }
+    return ev;
+  };
+  const evActual = conAhorro(evaluarRotacion(actuales, clima, prioridades, plagas, terreno));
   const claveActual = canonica(codigosActuales);
 
   const opciones = candidatas(catalogo, n)
     .filter((sec) => canonica(sec.map((c) => c.codigo)) !== claveActual)
     .map((sec) => ({
       sec,
-      ev: evaluarRotacion(sec, clima, prioridades, plagas),
+      ev: conAhorro(evaluarRotacion(sec, clima, prioridades, plagas, terreno)),
       comunes: sec.filter((c) => actuales.includes(c)).length,
     }))
     .sort((a, b) => b.ev.puntaje - a.ev.puntaje || a.ev._crudo.deficit - b.ev._crudo.deficit);

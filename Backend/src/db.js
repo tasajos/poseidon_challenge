@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
 import 'dotenv/config';
 import { hashPassword } from './auth.js';
-import { PERMISOS, POR_DEFECTO, FIJOS, ORIGINALES } from './permisos.js';
+import { PERMISOS, POR_DEFECTO, FIJOS, ORIGINALES, RETIROS } from './permisos.js';
 
 const leerJson = async (nombre) => JSON.parse(
   await readFile(new URL(`../../Database/${nombre}`, import.meta.url), 'utf8'),
@@ -14,8 +14,7 @@ export const cultivosDeArchivo = () => leerJson('cultivos.json');
 export const usuariosDemo = () => leerJson('usuarios_demo.json');
 
 let pool = null;
-// Cuando no hay MySQL: { usuarios, evaluaciones (parcela + evaluación juntas), rol_permisos,
-// preferencias_alertas, suscripciones_push, alertas_enviadas, ofertas, solicitudes, incidencias, incidencia_fotos }
+// Cuando no hay MySQL: un arreglo de filas por tabla, con las mismas columnas que en MySQL.
 let memoria = null;
 
 export function getPool() {
@@ -131,11 +130,90 @@ const MIGRACIONES = [
     creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (incidencia_id) REFERENCES incidencias(id) ON DELETE CASCADE,
     FOREIGN KEY (subido_por) REFERENCES usuarios(id) ON DELETE SET NULL)`,
+  // Registro de usuarios con aprobación (HU-ADM-01)
+  (db) => agregarColumnas(db, 'usuarios', {
+    telefono: 'VARCHAR(20) NULL',
+    pendiente: 'BOOLEAN NOT NULL DEFAULT FALSE',
+    creado_por: 'INT NULL',
+    aprobado_por: 'INT NULL',
+    aprobado_en: 'TIMESTAMP NULL',
+  }),
+  // Parcela registrada (HU-USR-01), terreno (HU-USR-05), NDVI (HU-USR-02) y técnico asignado (HU-OPT-01)
+  (db) => agregarColumnas(db, 'parcelas', {
+    superficie_ha: 'DECIMAL(9,2) NULL',
+    cultivo_actual: 'VARCHAR(30) NULL',
+    etapa: 'VARCHAR(20) NULL',
+    riego: 'VARCHAR(20) NULL',
+    perimetro: 'JSON NULL',
+    tecnico_id: 'INT NULL',
+    elevacion_m: 'DECIMAL(7,1) NULL',
+    pendiente_pct: 'DECIMAL(5,1) NULL',
+    terreno_en: 'TIMESTAMP NULL',
+    ndvi_en: 'TIMESTAMP NULL',
+  }),
+  // Estrategia que el agricultor decidió aplicar (HU-MON-03)
+  (db) => agregarColumnas(db, 'evaluaciones', { adoptada: 'VARCHAR(10) NULL', adoptada_en: 'TIMESTAMP NULL' }),
+  `CREATE TABLE IF NOT EXISTS ciclos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    parcela_id INT NOT NULL,
+    anio SMALLINT NOT NULL,
+    cultivo VARCHAR(30) NOT NULL,
+    rendimiento DECIMAL(8,2) NULL,
+    nota VARCHAR(300) NULL,
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (parcela_id) REFERENCES parcelas(id) ON DELETE CASCADE)`,
+  `CREATE TABLE IF NOT EXISTS ndvi (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    parcela_id INT NOT NULL,
+    fecha CHAR(10) NOT NULL,
+    valor DECIMAL(5,4) NOT NULL,
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY una_fecha (parcela_id, fecha),
+    FOREIGN KEY (parcela_id) REFERENCES parcelas(id) ON DELETE CASCADE)`,
+  `CREATE TABLE IF NOT EXISTS visitas (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    tecnico_id INT NOT NULL,
+    parcela_id INT NULL,
+    agricultor_id INT NOT NULL,
+    fecha CHAR(10) NOT NULL,
+    observaciones VARCHAR(2000) NOT NULL,
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (tecnico_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    FOREIGN KEY (agricultor_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    FOREIGN KEY (parcela_id) REFERENCES parcelas(id) ON DELETE SET NULL)`,
+  `CREATE TABLE IF NOT EXISTS validaciones (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    evaluacion_id INT NOT NULL,
+    estrategia VARCHAR(10) NOT NULL,
+    semillas VARCHAR(12) NULL,
+    observacion VARCHAR(1000) NOT NULL,
+    tecnico_id INT NOT NULL,
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (evaluacion_id) REFERENCES evaluaciones(id) ON DELETE CASCADE,
+    FOREIGN KEY (tecnico_id) REFERENCES usuarios(id) ON DELETE CASCADE)`,
+  `CREATE TABLE IF NOT EXISTS auditoria (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    actor_id INT NULL,
+    actor VARCHAR(120) NOT NULL,
+    accion VARCHAR(40) NOT NULL,
+    objeto VARCHAR(120) NOT NULL,
+    detalle JSON NULL,
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`,
 ];
+
+// ADD COLUMN IF NOT EXISTS no existe en MySQL 8: se consulta qué columnas hay y se agregan las que faltan.
+async function agregarColumnas(db, tabla, columnas) {
+  const [hay] = await db.query(
+    'SELECT COLUMN_NAME AS c FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?', [tabla]);
+  const existentes = new Set(hay.map((f) => String(f.c).toLowerCase()));
+  for (const [nombre, definicion] of Object.entries(columnas)) {
+    if (!existentes.has(nombre)) await db.query(`ALTER TABLE ${tabla} ADD COLUMN ${nombre} ${definicion}`);
+  }
+}
 
 // Aplica las migraciones (idempotentes). La usan el arranque del servidor y npm run seed.
 export async function migrar(db = getPool()) {
-  for (const sql of MIGRACIONES) await db.query(sql);
+  for (const m of MIGRACIONES) await (typeof m === 'function' ? m(db) : db.query(m));
 }
 
 const filasPorDefecto = () => Object.entries(POR_DEFECTO)
@@ -156,18 +234,12 @@ export async function iniciar() {
     }
     const hash = hashPassword(clave);
     memoria = {
+      ...Object.fromEntries(Object.keys(TABLAS).map((t) => [t, []])),
       usuarios: (await usuariosDemo()).map((u, i) => ({
-        id: i + 1, ...u, password_hash: hash, activo: true, creado_en: new Date(),
+        id: i + 1, ...u, password_hash: hash, activo: true, pendiente: false, telefono: null,
+        creado_por: null, aprobado_por: null, aprobado_en: null, creado_en: new Date(),
       })),
-      evaluaciones: [],
       rol_permisos: filasPorDefecto(),
-      preferencias_alertas: [],
-      suscripciones_push: [],
-      alertas_enviadas: [],
-      ofertas: [],
-      solicitudes: [],
-      incidencias: [],
-      incidencia_fotos: [],
     };
     console.warn(`[db] MySQL no disponible (${e.code || e.message}). Modo memoria: los datos no se guardan.`);
   }
@@ -186,7 +258,16 @@ export async function sembrarPermisos(db = getPool()) {
   if (filas.length) await db.query('INSERT IGNORE INTO rol_permisos (rol, permiso) VALUES ?', [filas.map((f) => [f.rol, f.permiso])]);
   const registrar = Object.keys(PERMISOS).filter((p) => !hechos.some((f) => f.permiso === p));
   if (registrar.length) await db.query('INSERT IGNORE INTO permisos_sembrados (permiso) VALUES ?', [registrar.map((p) => [p])]);
-  if (filas.length) cachePermisos = null;
+  // Retiros de una sola vez: solo en bases que ya tenían permisos configurados antes de este cambio.
+  for (const [clave, { permiso, roles }] of Object.entries(RETIROS)) {
+    if (hechos.some((f) => f.permiso === clave)) continue;
+    if (n > 0) {
+      const [r] = await db.query('DELETE FROM rol_permisos WHERE permiso = ? AND rol IN (?)', [permiso, roles]);
+      if (r.affectedRows) console.log(`[db] Se retiró "${permiso}" a ${roles.join(', ')} (una sola vez; el administrador puede volver a otorgarlo)`);
+    }
+    await db.query('INSERT IGNORE INTO permisos_sembrados (permiso) VALUES (?)', [clave]);
+  }
+  cachePermisos = null;
   return nuevos;
 }
 
@@ -209,7 +290,7 @@ export async function getCultivos() {
 }
 
 // ---------- Usuarios ----------
-const usuario = (u) => u && { ...u, activo: Boolean(u.activo) };
+const usuario = (u) => u && { ...u, activo: Boolean(u.activo), pendiente: Boolean(u.pendiente) };
 
 export async function usuarioPorEmail(email) {
   if (memoria) return usuario(memoria.usuarios.find((u) => u.email === email));
@@ -230,15 +311,34 @@ export async function listarUsuarios() {
   return filas.map(({ password_hash, ...u }) => usuario(u));
 }
 
-export async function crearUsuario({ nombre, email, password_hash, rol }) {
+// pendiente: la cuenta existe pero no puede ingresar hasta que un responsable la apruebe (HU-ADM-01).
+export async function crearUsuario({ nombre, email, password_hash, rol, telefono = null, pendiente = false, creadoPor = null }) {
   if (memoria) {
     const id = proximoId(memoria.usuarios);
-    memoria.usuarios.push({ id, nombre, email, password_hash, rol, activo: true, creado_en: new Date() });
+    memoria.usuarios.push({
+      id, nombre, email, password_hash, rol, telefono, activo: !pendiente, pendiente, creado_por: creadoPor,
+      aprobado_por: null, aprobado_en: null, creado_en: new Date(),
+    });
     return id;
   }
   const [r] = await getPool().query(
-    'INSERT INTO usuarios (nombre, email, password_hash, rol) VALUES (?, ?, ?, ?)', [nombre, email, password_hash, rol]);
+    'INSERT INTO usuarios (nombre, email, password_hash, rol, telefono, activo, pendiente, creado_por) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    [nombre, email, password_hash, rol, telefono, !pendiente, pendiente, creadoPor]);
   return r.insertId;
+}
+
+// Aprueba (activa) o rechaza (deja inactiva) una cuenta pendiente. Devuelve false si no estaba pendiente.
+export async function resolverPendiente(id, { aprobar, responsableId }) {
+  if (memoria) {
+    const u = memoria.usuarios.find((x) => x.id === Number(id) && x.pendiente);
+    if (!u) return false;
+    Object.assign(u, { pendiente: false, activo: aprobar, aprobado_por: aprobar ? responsableId : null, aprobado_en: aprobar ? new Date() : null });
+    return true;
+  }
+  const [r] = await getPool().query(
+    'UPDATE usuarios SET pendiente = FALSE, activo = ?, aprobado_por = ?, aprobado_en = ? WHERE id = ? AND pendiente',
+    [aprobar, aprobar ? responsableId : null, aprobar ? new Date() : null, id]);
+  return r.affectedRows > 0;
 }
 
 export async function actualizarUsuario(id, { rol, activo }) {
@@ -254,6 +354,11 @@ export async function actualizarUsuario(id, { rol, activo }) {
     [rol ?? null, activo ?? null, id]);
   return r.affectedRows > 0;
 }
+
+// La cuenta deja de poder ingresar hasta que un responsable la apruebe (p. ej., al subirla a un rol con privilegios).
+export const dejarPendiente = (id, responsableId) => modificar('usuarios', { id: Number(id) }, {
+  pendiente: true, activo: false, creado_por: responsableId, aprobado_por: null, aprobado_en: null,
+});
 
 // ---------- Permisos por rol ----------
 let cachePermisos = null; // { rol: Set } — se invalida al cambiar permisos o restaurar
@@ -304,7 +409,8 @@ export async function setPermisosRol(rol, permisos) {
 // ---------- Evaluaciones ----------
 const SQL_EVALUACIONES = `
   SELECT e.id, e.estado, e.nota_tecnico, e.revisado_en, e.creado_en, e.rotacion_actual, e.prioridades,
-         e.fuente_clima, e.resultado, p.nombre AS parcela, p.lat, p.lon, p.usuario_id,
+         e.fuente_clima, e.resultado, e.adoptada, e.adoptada_en, e.parcela_id,
+         p.nombre AS parcela, p.lat, p.lon, p.usuario_id, p.tecnico_id,
          u.nombre AS cliente, r.nombre AS revisor
   FROM evaluaciones e
   JOIN parcelas p ON p.id = e.parcela_id
@@ -316,49 +422,66 @@ const evaluacion = (f) => f && {
   rotacion_actual: json(f.rotacion_actual), prioridades: json(f.prioridades), resultado: json(f.resultado),
 };
 
+// En memoria: la evaluación unida a su parcela, con la misma forma que SQL_EVALUACIONES.
 function deMemoria(e) {
+  const p = memoria.parcelas.find((x) => x.id === e.parcela_id);
+  if (!p) return null;
   const nombreDe = (id) => memoria.usuarios.find((u) => u.id === id)?.nombre || null;
-  return { ...e, cliente: nombreDe(e.usuario_id), revisor: nombreDe(e.revisado_por) };
+  return {
+    ...e, parcela: p.nombre, lat: p.lat, lon: p.lon, usuario_id: p.usuario_id, tecnico_id: p.tecnico_id,
+    cliente: nombreDe(p.usuario_id), revisor: nombreDe(e.revisado_por),
+  };
 }
 
-export async function guardarEvaluacion({ usuarioId, nombre, lat, lon, rotacion, prioridades, fuenteClima, estrategias }) {
+// Guarda una evaluación de una parcela ya registrada.
+export async function guardarEvaluacion({ parcelaId, rotacion, prioridades, fuenteClima, estrategias }) {
   if (memoria) {
     const id = proximoId(memoria.evaluaciones);
     memoria.evaluaciones.push({
-      id, usuario_id: usuarioId, parcela: nombre, lat, lon, rotacion_actual: rotacion, prioridades,
+      id, parcela_id: parcelaId, rotacion_actual: rotacion, prioridades,
       fuente_clima: fuenteClima, resultado: estrategias, estado: 'pendiente', nota_tecnico: null,
-      revisado_por: null, revisado_en: null, creado_en: new Date(),
+      revisado_por: null, revisado_en: null, adoptada: null, adoptada_en: null, creado_en: new Date(),
     });
     return id;
   }
-  const db = getPool();
-  const [p] = await db.query('INSERT INTO parcelas (usuario_id, nombre, lat, lon) VALUES (?, ?, ?, ?)', [usuarioId, nombre, lat, lon]);
-  const [e] = await db.query(
+  const [e] = await getPool().query(
     'INSERT INTO evaluaciones (parcela_id, rotacion_actual, prioridades, fuente_clima, resultado) VALUES (?, ?, ?, ?, ?)',
-    [p.insertId, JSON.stringify(rotacion), JSON.stringify(prioridades), fuenteClima, JSON.stringify(estrategias)]);
+    [parcelaId, JSON.stringify(rotacion), JSON.stringify(prioridades), fuenteClima, JSON.stringify(estrategias)]);
   return e.insertId;
 }
 
-// usuarioId limita a las evaluaciones de ese cliente; sin él devuelve todas.
-export async function listarEvaluaciones({ usuarioId } = {}) {
+// usuarioId: las de las parcelas de esa persona. tecnicoId: las de sus parcelas asignadas (y las propias).
+// parcelaId: las de una parcela. Sin filtros devuelve todas.
+export async function listarEvaluaciones({ usuarioId, tecnicoId, parcelaId } = {}) {
   if (memoria) {
-    return memoria.evaluaciones
-      .filter((e) => !usuarioId || e.usuario_id === usuarioId)
-      .map(deMemoria).reverse();
+    return memoria.evaluaciones.map(deMemoria).filter(Boolean)
+      .filter((e) => (!usuarioId || e.usuario_id === usuarioId)
+        && (!tecnicoId || e.tecnico_id === tecnicoId || e.usuario_id === tecnicoId)
+        && (!parcelaId || e.parcela_id === Number(parcelaId)))
+      .reverse();
   }
+  const donde = [], valores = [];
+  if (usuarioId) { donde.push('p.usuario_id = ?'); valores.push(usuarioId); }
+  if (tecnicoId) { donde.push('(p.tecnico_id = ? OR p.usuario_id = ?)'); valores.push(tecnicoId, tecnicoId); }
+  if (parcelaId) { donde.push('e.parcela_id = ?'); valores.push(parcelaId); }
   const [f] = await getPool().query(
-    `${SQL_EVALUACIONES} ${usuarioId ? 'WHERE p.usuario_id = ?' : ''} ORDER BY e.id DESC LIMIT 200`,
-    usuarioId ? [usuarioId] : []);
+    `${SQL_EVALUACIONES} ${donde.length ? `WHERE ${donde.join(' AND ')}` : ''} ORDER BY e.id DESC LIMIT 500`, valores);
   return f.map(evaluacion);
 }
 
 export async function obtenerEvaluacion(id) {
   if (memoria) {
     const e = memoria.evaluaciones.find((x) => x.id === Number(id));
-    return e ? deMemoria(e) : undefined;
+    return (e && deMemoria(e)) || undefined;
   }
   const [f] = await getPool().query(`${SQL_EVALUACIONES} WHERE e.id = ?`, [id]);
   return evaluacion(f[0]);
+}
+
+// Estrategia que el agricultor decidió aplicar: 'actual', 'ajuste', 'cambio' o null (HU-MON-03).
+export async function marcarAdopcion(id, estrategia) {
+  const cambios = { adoptada: estrategia, adoptada_en: estrategia ? new Date() : null };
+  return (await modificar('evaluaciones', { id: Number(id) }, cambios)) > 0;
 }
 
 export async function revisarEvaluacion(id, { nota, revisorId }) {
@@ -379,9 +502,10 @@ export async function revisarEvaluacion(id, { nota, revisorId }) {
 export async function parcelasParaAlertas({ usuarioId } = {}) {
   if (memoria) {
     const activos = new Map(memoria.usuarios.filter((u) => u.activo).map((u) => [u.id, u]));
-    return memoria.evaluaciones
-      .filter((e) => activos.has(e.usuario_id) && (!usuarioId || e.usuario_id === usuarioId))
-      .map((e) => ({ id: e.id, usuario_id: e.usuario_id, rol: activos.get(e.usuario_id).rol, nombre: e.parcela, lat: e.lat, lon: e.lon }));
+    return memoria.parcelas
+      .filter((p) => activos.has(p.usuario_id) && (!usuarioId || p.usuario_id === usuarioId))
+      .map((p) => ({ id: p.id, usuario_id: p.usuario_id, rol: activos.get(p.usuario_id).rol, nombre: p.nombre, lat: p.lat, lon: p.lon }))
+      .reverse();
   }
   const [f] = await getPool().query(
     `SELECT p.id, p.usuario_id, u.rol, p.nombre, p.lat, p.lon FROM parcelas p
@@ -489,7 +613,8 @@ const oferta = (f) => f && {
 };
 
 function ofertaDeMemoria(o) {
-  const e = memoria.evaluaciones.find((x) => x.id === o.evaluacion_id);
+  const cruda = memoria.evaluaciones.find((x) => x.id === o.evaluacion_id);
+  const e = cruda && deMemoria(cruda);
   const u = memoria.usuarios.find((x) => x.id === o.usuario_id);
   if (!e || !u) return null;
   return {
@@ -567,7 +692,8 @@ const solicitud = (f) => f && {
 
 function solicitudDeMemoria(s) {
   const o = memoria.ofertas.find((x) => x.id === s.oferta_id);
-  const e = o && memoria.evaluaciones.find((x) => x.id === o.evaluacion_id);
+  const cruda = o && memoria.evaluaciones.find((x) => x.id === o.evaluacion_id);
+  const e = cruda && deMemoria(cruda);
   const c = memoria.usuarios.find((x) => x.id === s.comprador_id);
   const p = memoria.usuarios.find((x) => x.id === s.productor_id);
   if (!o || !e || !c || !p) return null;
@@ -711,18 +837,194 @@ export async function agregarFoto({ incidenciaId, almacen, archivo, enlace, mime
   return r.insertId;
 }
 
+// ---------- Almacén genérico ----------
+// Para las tablas añadidas desde HU-USR-01: una sola ruta de código para MySQL y memoria.
+// donde: igualdades entre columnas y valores; un arreglo equivale a IN (...) y null a IS NULL.
+function fila(tabla, f) {
+  const { num = [], json: cj = [], bool = [] } = TABLAS[tabla];
+  const r = { ...f };
+  for (const c of num) if (r[c] !== null && r[c] !== undefined) r[c] = Number(r[c]);
+  for (const c of cj) if (r[c] !== null && r[c] !== undefined) r[c] = json(r[c]);
+  for (const c of bool) if (r[c] !== null && r[c] !== undefined) r[c] = Boolean(r[c]);
+  return r;
+}
+
+const coincide = (f, donde) => Object.entries(donde).every(([k, v]) => (Array.isArray(v) ? v.includes(f[k]) : f[k] === v));
+
+function sqlDonde(donde) {
+  const claves = Object.keys(donde);
+  if (!claves.length) return { sql: '', valores: [] };
+  const partes = claves.map((k) => (donde[k] === null ? `${k} IS NULL` : Array.isArray(donde[k]) ? `${k} IN (?)` : `${k} = ?`));
+  return { sql: `WHERE ${partes.join(' AND ')}`, valores: claves.filter((k) => donde[k] !== null).map((k) => donde[k]) };
+}
+
+const paraMysql = (tabla, datos) => {
+  const { json: cj = [] } = TABLAS[tabla];
+  return Object.fromEntries(Object.entries(datos).map(([k, v]) => [k, cj.includes(k) && v !== null ? JSON.stringify(v) : v]));
+};
+
+// Filas más recientes primero.
+export async function seleccionar(tabla, donde = {}, limite = 2000) {
+  if (Object.values(donde).some((v) => Array.isArray(v) && !v.length)) return [];
+  if (memoria) return memoria[tabla].filter((f) => coincide(f, donde)).slice(-limite).reverse().map((f) => ({ ...f }));
+  const { sql, valores } = sqlDonde(donde);
+  const [f] = await getPool().query(`SELECT * FROM ${tabla} ${sql} ORDER BY id DESC LIMIT ${Number(limite)}`, valores);
+  return f.map((x) => fila(tabla, x));
+}
+
+async function insertar(tabla, datos) {
+  if (memoria) {
+    const { cols, defecto = {} } = TABLAS[tabla];
+    const id = proximoId(memoria[tabla]);
+    memoria[tabla].push({ ...Object.fromEntries(cols.map((c) => [c, defecto[c] ?? null])), ...datos, id, creado_en: new Date() });
+    return id;
+  }
+  const [r] = await getPool().query(`INSERT INTO ${tabla} SET ?`, [paraMysql(tabla, datos)]);
+  return r.insertId;
+}
+
+// Devuelve cuántas filas coincidían.
+async function modificar(tabla, donde, cambios) {
+  if (memoria) {
+    const filas = memoria[tabla].filter((f) => coincide(f, donde));
+    for (const f of filas) Object.assign(f, cambios);
+    return filas.length;
+  }
+  const { sql, valores } = sqlDonde(donde);
+  const [r] = await getPool().query(`UPDATE ${tabla} SET ? ${sql}`, [paraMysql(tabla, cambios), ...valores]);
+  return r.affectedRows;
+}
+
+async function eliminar(tabla, donde) {
+  if (Object.values(donde).some((v) => Array.isArray(v) && !v.length)) return 0;
+  if (memoria) {
+    const antes = memoria[tabla].length;
+    memoria[tabla] = memoria[tabla].filter((f) => !coincide(f, donde));
+    return antes - memoria[tabla].length;
+  }
+  const { sql, valores } = sqlDonde(donde);
+  const [r] = await getPool().query(`DELETE FROM ${tabla} ${sql}`, valores);
+  return r.affectedRows;
+}
+
+// ---------- Parcelas (HU-USR-01, HU-OPT-01) ----------
+async function conNombres(parcelas) {
+  const nombre = new Map((await listarUsuarios()).map((u) => [u.id, u.nombre]));
+  return parcelas.map((p) => ({ ...p, agricultor: nombre.get(p.usuario_id) || null, tecnico: nombre.get(p.tecnico_id) || null }));
+}
+
+// usuarioId: las de ese agricultor. tecnicoId: las asignadas a ese técnico. Sin filtros, todas.
+export async function listarParcelas({ usuarioId, tecnicoId } = {}) {
+  const donde = {};
+  if (usuarioId) donde.usuario_id = usuarioId;
+  if (tecnicoId) donde.tecnico_id = tecnicoId;
+  return conNombres(await seleccionar('parcelas', donde));
+}
+
+export async function obtenerParcela(id) {
+  if (!Number.isInteger(Number(id))) return undefined;
+  return (await conNombres(await seleccionar('parcelas', { id: Number(id) })))[0];
+}
+
+// Técnico activo con menos parcelas asignadas (reparto automático; el administrador puede reasignar).
+async function tecnicoDisponible() {
+  const tecnicos = (await listarUsuarios()).filter((u) => u.rol === 'operativo' && u.activo);
+  if (!tecnicos.length) return null;
+  const carga = new Map(tecnicos.map((t) => [t.id, 0]));
+  for (const p of await seleccionar('parcelas', { tecnico_id: tecnicos.map((t) => t.id) }, 100000)) carga.set(p.tecnico_id, carga.get(p.tecnico_id) + 1);
+  return tecnicos.sort((a, b) => carga.get(a.id) - carga.get(b.id) || a.id - b.id)[0].id;
+}
+
+export async function crearParcela({ usuarioId, nombre, lat, lon, superficie = null, cultivo = null, etapa = null, riego = null, perimetro = null }) {
+  return insertar('parcelas', {
+    usuario_id: usuarioId, nombre, lat, lon, superficie_ha: superficie, cultivo_actual: cultivo, etapa, riego, perimetro,
+    tecnico_id: await tecnicoDisponible(),
+  });
+}
+
+// cambios: columnas de parcelas (datos del agricultor, técnico asignado, terreno, fecha del NDVI).
+export const actualizarParcela = async (id, cambios) => (await modificar('parcelas', { id: Number(id) }, cambios)) > 0;
+
+// ---------- Historial de la parcela (HU-USR-02) ----------
+export const listarCiclos = (parcelaIds) => seleccionar('ciclos', { parcela_id: [].concat(parcelaIds) }, 5000);
+export const crearCiclo = ({ parcelaId, anio, cultivo, rendimiento, nota }) => insertar('ciclos', { parcela_id: parcelaId, anio, cultivo, rendimiento, nota });
+export const borrarCiclo = async (id, parcelaId) => (await eliminar('ciclos', { id: Number(id), parcela_id: parcelaId })) > 0;
+
+// NDVI guardado: [{ fecha: 'AAAA-MM-DD', valor }]. Reemplaza las fechas que ya existían.
+export async function guardarNdvi(parcelaId, puntos) {
+  if (!puntos.length) return;
+  await eliminar('ndvi', { parcela_id: parcelaId, fecha: puntos.map((p) => p.fecha) });
+  for (const p of puntos) await insertar('ndvi', { parcela_id: parcelaId, fecha: p.fecha, valor: p.valor });
+  await modificar('parcelas', { id: parcelaId }, { ndvi_en: new Date() });
+}
+export const ndviDe = async (parcelaIds) => (await seleccionar('ndvi', { parcela_id: [].concat(parcelaIds) }, 100000))
+  .map(({ parcela_id, fecha, valor }) => ({ parcela_id, fecha, valor })).sort((a, b) => a.fecha.localeCompare(b.fecha));
+
+// ---------- Asistencia técnica (HU-OPT-03, HU-OPT-04) ----------
+export const crearVisita = ({ tecnicoId, parcelaId, agricultorId, fecha, observaciones }) => insertar('visitas', {
+  tecnico_id: tecnicoId, parcela_id: parcelaId, agricultor_id: agricultorId, fecha, observaciones,
+});
+
+// tecnicoId o agricultorId limitan la lista. Incluye nombres de técnico, agricultor y parcela.
+export async function listarVisitas({ tecnicoId, agricultorId, parcelaId } = {}) {
+  const donde = {};
+  if (tecnicoId) donde.tecnico_id = tecnicoId;
+  if (agricultorId) donde.agricultor_id = agricultorId;
+  if (parcelaId) donde.parcela_id = parcelaId;
+  const visitas = await seleccionar('visitas', donde, 5000);
+  const nombre = new Map((await listarUsuarios()).map((u) => [u.id, u.nombre]));
+  const parcelas = new Map((await seleccionar('parcelas', { id: [...new Set(visitas.map((v) => v.parcela_id).filter(Boolean))] })).map((p) => [p.id, p]));
+  return visitas.map((v) => ({
+    ...v, tecnico: nombre.get(v.tecnico_id) || null, agricultor: nombre.get(v.agricultor_id) || null,
+    parcela: parcelas.get(v.parcela_id)?.nombre || null, lat: parcelas.get(v.parcela_id)?.lat ?? null, lon: parcelas.get(v.parcela_id)?.lon ?? null,
+  })).sort((a, b) => b.fecha.localeCompare(a.fecha) || b.id - a.id);
+}
+
+export const crearValidacion = ({ evaluacionId, estrategia, semillas, observacion, tecnicoId }) => insertar('validaciones', {
+  evaluacion_id: evaluacionId, estrategia, semillas, observacion, tecnico_id: tecnicoId,
+});
+
+// evaluacionIds limita a esas evaluaciones; sin él devuelve todas (más recientes primero).
+export async function listarValidaciones({ evaluacionIds, tecnicoId } = {}) {
+  const donde = {};
+  if (evaluacionIds) donde.evaluacion_id = [].concat(evaluacionIds);
+  if (tecnicoId) donde.tecnico_id = tecnicoId;
+  const filas = await seleccionar('validaciones', donde, 5000);
+  const nombre = new Map((await listarUsuarios()).map((u) => [u.id, u.nombre]));
+  return filas.map((v) => ({ ...v, tecnico: nombre.get(v.tecnico_id) || null }));
+}
+
+// ---------- Auditoría (HU-ADM-01) ----------
+// detalle nunca debe llevar contraseñas, hashes ni tokens: quien llama pasa solo datos descriptivos.
+export const auditar = ({ actor, accion, objeto, detalle = null }) => insertar('auditoria', {
+  actor_id: actor?.id ?? null, actor: actor?.email || 'sistema', accion, objeto: String(objeto).slice(0, 120), detalle,
+});
+export const listarAuditoria = (limite = 200) => seleccionar('auditoria', {}, limite);
+
 // ---------- Respaldo y restauración ----------
 // Tablas que entran en un respaldo, en orden de inserción. Solo se escriben las columnas listadas.
+// num, json y bool indican cómo leer cada columna; defecto, el valor de una columna NOT NULL que
+// falta en respaldos anteriores a ella.
 export const TABLAS = {
-  usuarios: { cols: ['id', 'nombre', 'email', 'password_hash', 'rol', 'activo', 'creado_en'], fechas: ['creado_en'] },
+  usuarios: {
+    cols: ['id', 'nombre', 'email', 'password_hash', 'rol', 'activo', 'telefono', 'pendiente', 'creado_por', 'aprobado_por', 'aprobado_en', 'creado_en'],
+    fechas: ['aprobado_en', 'creado_en'], bool: ['activo', 'pendiente'], defecto: { pendiente: false },
+  },
   rol_permisos: { cols: ['rol', 'permiso'] },
-  parcelas: { cols: ['id', 'usuario_id', 'nombre', 'lat', 'lon', 'creado_en'], fechas: ['creado_en'] },
+  parcelas: {
+    cols: ['id', 'usuario_id', 'nombre', 'lat', 'lon', 'superficie_ha', 'cultivo_actual', 'etapa', 'riego', 'perimetro', 'tecnico_id',
+      'elevacion_m', 'pendiente_pct', 'terreno_en', 'ndvi_en', 'creado_en'],
+    json: ['perimetro'], fechas: ['terreno_en', 'ndvi_en', 'creado_en'], num: ['lat', 'lon', 'superficie_ha', 'elevacion_m', 'pendiente_pct'],
+  },
   evaluaciones: {
     cols: ['id', 'parcela_id', 'rotacion_actual', 'prioridades', 'fuente_clima', 'resultado', 'estado',
-      'nota_tecnico', 'revisado_por', 'revisado_en', 'creado_en'],
-    json: ['rotacion_actual', 'prioridades', 'resultado'], fechas: ['revisado_en', 'creado_en'],
+      'nota_tecnico', 'revisado_por', 'revisado_en', 'adoptada', 'adoptada_en', 'creado_en'],
+    json: ['rotacion_actual', 'prioridades', 'resultado'], fechas: ['revisado_en', 'adoptada_en', 'creado_en'],
   },
-  preferencias_alertas: { cols: ['usuario_id', 'helada', 'sequia', 'web', 'sms', 'telefono', 'actualizado_en'], fechas: ['actualizado_en'] },
+  preferencias_alertas: {
+    cols: ['usuario_id', 'helada', 'sequia', 'web', 'sms', 'telefono', 'actualizado_en'], fechas: ['actualizado_en'],
+    bool: ['helada', 'sequia', 'web', 'sms'],
+  },
   suscripciones_push: { cols: ['id', 'usuario_id', 'endpoint', 'p256dh', 'auth', 'creado_en'], fechas: ['creado_en'] },
   alertas_enviadas: {
     cols: ['id', 'usuario_id', 'parcela_id', 'tipo', 'clave', 'titulo', 'mensaje', 'canales', 'creado_en'],
@@ -730,32 +1032,33 @@ export const TABLAS = {
   },
   ofertas: {
     cols: ['id', 'usuario_id', 'evaluacion_id', 'cultivo', 'cantidad', 'unidad', 'disponible_desde', 'nota', 'activa', 'creado_en'],
-    fechas: ['creado_en'],
+    fechas: ['creado_en'], num: ['cantidad'], bool: ['activa'],
   },
   solicitudes: {
     cols: ['id', 'oferta_id', 'comprador_id', 'productor_id', 'tipo', 'cantidad', 'mensaje', 'estado', 'respuesta',
       'telefono_productor', 'respondido_en', 'creado_en'],
-    fechas: ['respondido_en', 'creado_en'],
+    fechas: ['respondido_en', 'creado_en'], num: ['cantidad'],
   },
   incidencias: {
     cols: ['id', 'tecnico_id', 'tipo', 'agente', 'cultivo', 'severidad', 'lat', 'lon', 'precision_m', 'nota', 'estado', 'creado_en'],
-    fechas: ['creado_en'],
+    fechas: ['creado_en'], num: ['lat', 'lon'],
   },
   incidencia_fotos: {
     cols: ['id', 'incidencia_id', 'almacen', 'archivo', 'enlace', 'mime', 'bytes', 'subido_por', 'creado_en'],
     fechas: ['creado_en'],
   },
+  ciclos: { cols: ['id', 'parcela_id', 'anio', 'cultivo', 'rendimiento', 'nota', 'creado_en'], fechas: ['creado_en'], num: ['rendimiento'] },
+  ndvi: { cols: ['id', 'parcela_id', 'fecha', 'valor', 'creado_en'], fechas: ['creado_en'], num: ['valor'] },
+  visitas: { cols: ['id', 'tecnico_id', 'parcela_id', 'agricultor_id', 'fecha', 'observaciones', 'creado_en'], fechas: ['creado_en'] },
+  validaciones: { cols: ['id', 'evaluacion_id', 'estrategia', 'semillas', 'observacion', 'tecnico_id', 'creado_en'], fechas: ['creado_en'] },
+  auditoria: { cols: ['id', 'actor_id', 'actor', 'accion', 'objeto', 'detalle', 'creado_en'], json: ['detalle'], fechas: ['creado_en'] },
 };
-// Tablas que en modo memoria se guardan tal cual (sin juntar parcela y evaluación).
-const TABLAS_SIMPLES = ['preferencias_alertas', 'suscripciones_push', 'alertas_enviadas', 'ofertas', 'solicitudes', 'incidencias', 'incidencia_fotos'];
-const NUMEROS = { ofertas: ['cantidad'], solicitudes: ['cantidad'], incidencias: ['lat', 'lon'] }; // DECIMAL llega como texto
-
 
 // Normaliza una fila de respaldo: solo columnas conocidas, fechas como Date y JSON como objeto.
 function normalizar(tabla, f) {
-  const { cols, json: cj = [], fechas = [] } = TABLAS[tabla];
+  const { cols, json: cj = [], fechas = [], defecto = {} } = TABLAS[tabla];
   return Object.fromEntries(cols.map((c) => {
-    let v = f[c] ?? null;
+    let v = f[c] ?? defecto[c] ?? null;
     if (v !== null && fechas.includes(c)) v = new Date(v);
     if (v !== null && cj.includes(c)) v = json(v);
     return [c, v];
@@ -763,19 +1066,11 @@ function normalizar(tabla, f) {
 }
 
 export async function exportar() {
-  if (memoria) {
-    const m = memoria;
-    return {
-      usuarios: m.usuarios.map((u) => normalizar('usuarios', u)),
-      rol_permisos: m.rol_permisos.map((f) => ({ ...f })),
-      parcelas: m.evaluaciones.map((e) => normalizar('parcelas', { ...e, nombre: e.parcela })),
-      evaluaciones: m.evaluaciones.map((e) => normalizar('evaluaciones', { ...e, parcela_id: e.id })),
-      ...Object.fromEntries(TABLAS_SIMPLES.map((k) => [k, m[k].map((f) => normalizar(k, f))])),
-    };
-  }
   const salida = {};
   for (const [tabla, { cols }] of Object.entries(TABLAS)) {
-    const [filas] = await getPool().query(`SELECT ${cols.join(', ')} FROM ${tabla}`);
+    let filas;
+    if (memoria) filas = memoria[tabla];
+    else [filas] = await getPool().query(`SELECT ${cols.join(', ')} FROM ${tabla}`);
     salida[tabla] = filas.map((f) => normalizar(tabla, f));
   }
   return salida;
@@ -786,21 +1081,7 @@ export async function exportar() {
 export async function importar(datos) {
   const t = Object.fromEntries(Object.keys(TABLAS).map((k) => [k, (datos[k] || []).map((f) => normalizar(k, f))]));
   if (memoria) {
-    const parcelas = new Map(t.parcelas.map((p) => [p.id, p]));
-    memoria = {
-      usuarios: t.usuarios.map((u) => ({ ...u, activo: Boolean(u.activo) })),
-      evaluaciones: t.evaluaciones.filter((e) => parcelas.has(e.parcela_id)).map(({ parcela_id, ...e }) => {
-        const p = parcelas.get(parcela_id);
-        return { ...e, usuario_id: p.usuario_id, parcela: p.nombre, lat: Number(p.lat), lon: Number(p.lon) };
-      }),
-      rol_permisos: t.rol_permisos,
-      ...Object.fromEntries(TABLAS_SIMPLES.map((k) => [k, t[k].map((f) => {
-        const fila = { ...f };
-        for (const c of NUMEROS[k] || []) if (fila[c] !== null) fila[c] = Number(fila[c]);
-        if (k === 'ofertas') fila.activa = Boolean(fila.activa);
-        return fila;
-      })])),
-    };
+    memoria = Object.fromEntries(Object.keys(TABLAS).map((k) => [k, t[k].map((f) => fila(k, f))]));
   } else {
     const cx = await getPool().getConnection();
     try {

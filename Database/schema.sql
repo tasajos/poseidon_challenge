@@ -12,6 +12,11 @@ CREATE TABLE IF NOT EXISTS usuarios (
   password_hash VARCHAR(200) NOT NULL,     -- scrypt, formato "sal:hash" en hexadecimal
   rol ENUM('administrador','operativo','cliente','monitoreo','comprador') NOT NULL DEFAULT 'cliente',  -- cliente = agricultor; comprador = cooperativa o mercado
   activo BOOLEAN NOT NULL DEFAULT TRUE,
+  telefono VARCHAR(20) NULL,
+  pendiente BOOLEAN NOT NULL DEFAULT FALSE,  -- cuenta con privilegios que espera aprobación (HU-ADM-01)
+  creado_por INT NULL,
+  aprobado_por INT NULL,
+  aprobado_en TIMESTAMP NULL,
   creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -35,8 +40,20 @@ CREATE TABLE IF NOT EXISTS parcelas (
   id INT AUTO_INCREMENT PRIMARY KEY,
   usuario_id INT NOT NULL,                 -- cliente dueño de la parcela
   nombre VARCHAR(80) NOT NULL,
-  lat DECIMAL(8,5) NOT NULL,
+  lat DECIMAL(8,5) NOT NULL,               -- punto marcado o centro del perímetro
   lon DECIMAL(8,5) NOT NULL,
+  -- Declarado por el agricultor (HU-USR-01); NULL = no disponible
+  superficie_ha DECIMAL(9,2) NULL,
+  cultivo_actual VARCHAR(30) NULL,
+  etapa VARCHAR(20) NULL,                  -- preparacion, siembra, crecimiento, floracion, cosecha, descanso
+  riego VARCHAR(20) NULL,                  -- permanente, temporal, sin_riego
+  perimetro JSON NULL,                     -- [[lat, lon], ...]
+  tecnico_id INT NULL,                     -- técnico de campo asignado (HU-OPT-01)
+  -- Completado por el sistema: SRTM (HU-USR-05) y fecha del último NDVI guardado (HU-USR-02)
+  elevacion_m DECIMAL(7,1) NULL,
+  pendiente_pct DECIMAL(5,1) NULL,
+  terreno_en TIMESTAMP NULL,
+  ndvi_en TIMESTAMP NULL,
   creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
 );
@@ -53,6 +70,8 @@ CREATE TABLE IF NOT EXISTS evaluaciones (
   nota_tecnico TEXT NULL,
   revisado_por INT NULL,
   revisado_en TIMESTAMP NULL,
+  adoptada VARCHAR(10) NULL,               -- estrategia que el agricultor decidió aplicar: actual, ajuste o cambio (HU-MON-03)
+  adoptada_en TIMESTAMP NULL,
   creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (parcela_id) REFERENCES parcelas(id) ON DELETE CASCADE,
   FOREIGN KEY (revisado_por) REFERENCES usuarios(id) ON DELETE SET NULL
@@ -63,7 +82,7 @@ CREATE TABLE IF NOT EXISTS evaluaciones (
 -- (Backend/src/permisos.js) solo si la tabla está vacía. El backend crea estas tablas al arrancar si faltan.
 CREATE TABLE IF NOT EXISTS rol_permisos (
   rol ENUM('administrador','operativo','cliente','monitoreo','comprador') NOT NULL,
-  permiso VARCHAR(30) NOT NULL,            -- evaluar, ver_todas, revisar, reportes, alertas, usuarios, respaldos, ofertar, comprar, incidencias
+  permiso VARCHAR(30) NOT NULL,            -- ver Backend/src/permisos.js
   PRIMARY KEY (rol, permiso)
 );
 
@@ -178,4 +197,67 @@ CREATE TABLE IF NOT EXISTS incidencia_fotos (
   creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (incidencia_id) REFERENCES incidencias(id) ON DELETE CASCADE,
   FOREIGN KEY (subido_por) REFERENCES usuarios(id) ON DELETE SET NULL
+);
+
+-- ---------- Historial de la parcela (HU-USR-02) ----------
+-- Campañas anteriores que registra el agricultor
+CREATE TABLE IF NOT EXISTS ciclos (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  parcela_id INT NOT NULL,
+  anio SMALLINT NOT NULL,
+  cultivo VARCHAR(30) NOT NULL,
+  rendimiento DECIMAL(8,2) NULL,           -- quintales por hectárea
+  nota VARCHAR(300) NULL,
+  creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (parcela_id) REFERENCES parcelas(id) ON DELETE CASCADE
+);
+
+-- NDVI de MODIS (MOD13Q1, 250 m) guardado por parcela: época húmeda (ene-mar) y seca (jul-sep) de cada año
+CREATE TABLE IF NOT EXISTS ndvi (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  parcela_id INT NOT NULL,
+  fecha CHAR(10) NOT NULL,                 -- AAAA-MM-DD del compuesto de 16 días
+  valor DECIMAL(5,4) NOT NULL,
+  creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY una_fecha (parcela_id, fecha),
+  FOREIGN KEY (parcela_id) REFERENCES parcelas(id) ON DELETE CASCADE
+);
+
+-- ---------- Asistencia técnica (HU-OPT-03, HU-OPT-04) ----------
+CREATE TABLE IF NOT EXISTS visitas (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  tecnico_id INT NOT NULL,
+  parcela_id INT NULL,
+  agricultor_id INT NOT NULL,
+  fecha CHAR(10) NOT NULL,                 -- AAAA-MM-DD
+  observaciones VARCHAR(2000) NOT NULL,
+  creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (tecnico_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+  FOREIGN KEY (agricultor_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+  FOREIGN KEY (parcela_id) REFERENCES parcelas(id) ON DELETE SET NULL
+);
+
+-- Observación del técnico local sobre una estrategia (semillas, microclima)
+CREATE TABLE IF NOT EXISTS validaciones (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  evaluacion_id INT NOT NULL,
+  estrategia VARCHAR(10) NOT NULL,         -- actual, ajuste o cambio
+  semillas VARCHAR(12) NULL,               -- disponible, limitada, no_disponible
+  observacion VARCHAR(1000) NOT NULL,
+  tecnico_id INT NOT NULL,
+  creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (evaluacion_id) REFERENCES evaluaciones(id) ON DELETE CASCADE,
+  FOREIGN KEY (tecnico_id) REFERENCES usuarios(id) ON DELETE CASCADE
+);
+
+-- ---------- Auditoría (HU-ADM-01) ----------
+-- Quién hizo qué. El detalle nunca guarda contraseñas ni hashes.
+CREATE TABLE IF NOT EXISTS auditoria (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  actor_id INT NULL,
+  actor VARCHAR(120) NOT NULL,             -- correo de quien actuó, o "sistema"
+  accion VARCHAR(40) NOT NULL,             -- usuario.registrado, usuario.aprobado, permisos.cambiados, parcela.asignada...
+  objeto VARCHAR(120) NOT NULL,
+  detalle JSON NULL,
+  creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

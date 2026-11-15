@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, LayersControl, CircleMarker, Circle, Tooltip, 
 import { api } from '../api.js';
 import { COCHABAMBA, Pestanas, Stat, fechaHora, useDatos } from '../componentes.jsx';
 import { comprimir } from '../imagen.js';
+import 'leaflet/dist/leaflet.css';
 
 // Técnico de campo: marca plagas, enfermedades y deficiencias con GPS y fotos (HU-OPT-02).
 const TIPOS = { plaga: 'Plaga', enfermedad: 'Enfermedad', deficiencia: 'Deficiencia' };

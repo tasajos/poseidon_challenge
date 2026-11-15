@@ -228,15 +228,16 @@ export const TERMINOS = [
     sigla: 'NDVI',
     categoria: 'datos',
     icono: 'satelite',
-    noUsado: true,
     corto: 'Un número de −1 a 1 que dice qué tan verde y vigorosa está la vegetación, visto desde un satélite.',
     explicacion: 'Las hojas sanas reflejan mucha luz infrarroja (que nuestros ojos no ven) y absorben la luz roja. '
       + 'El satélite mide las dos y las compara: mientras más alto el número, más hojas verdes y activas hay. '
       + 'El suelo desnudo da cerca de 0,1; el agua y las nubes, menos de 0.',
     ejemplo: 'Una chacra de papa en floración puede marcar 0,7. Si una esquina baja a 0,3 mientras el resto sigue en 0,7, '
       + 'conviene ir a mirar esa esquina: puede faltar agua, haber plaga o encharcamiento.',
-    usoPoseidon: 'Poseidon todavía no usa el NDVI. Es uno de los próximos pasos para seguir el estado de cada parcela.',
-    fuente: 'Satélites como Landsat (NASA/USGS), Sentinel-2 o MODIS',
+    usoPoseidon: 'En la ficha de cada parcela guardamos el NDVI de dos épocas por año: la húmeda (enero a marzo, con cultivos en pie) y la seca '
+      + '(julio a septiembre). Por debajo de 0,2 en la época seca contamos el suelo como desnudo. El dato viene de MODIS, con cuadros de 250 m '
+      + 'que suelen abarcar más que la parcela: es un indicio, no una medición de su terreno.',
+    fuente: 'NASA MODIS (MOD13Q1, 250 m cada 16 días)',
     visual: {
       tipo: 'escala',
       min: -1, max: 1, decimales: 1,
@@ -387,6 +388,55 @@ export const TERMINOS = [
     usoPoseidon: 'Las rotaciones que siembran la familia atacada bajan de puntaje (más aún si la repiten dos campañas seguidas) '
       + 'y la explicación lo dice. Cuando el técnico marca la incidencia como controlada, deja de contar.',
     fuente: 'Incidencias registradas por técnicos de Poseidon',
+  },
+  {
+    id: 'pendiente',
+    nombre: 'Pendiente y riesgo de erosión',
+    categoria: 'suelo',
+    icono: 'suelo',
+    corto: 'Cuánto se inclina el terreno: en una pendiente de 10 %, el suelo baja 10 metros por cada 100 que avanza.',
+    explicacion: 'En un terreno inclinado el agua de lluvia no se queda: corre ladera abajo y se lleva la tierra fina y el abono. '
+      + 'Cuanto más inclinado y más desnudo está el suelo, más se pierde. Las raíces profundas y las plantas que cubren el suelo lo sujetan. '
+      + 'Menos de 5 % es riesgo bajo; de 5 a 15 %, medio; más de 15 %, alto.',
+    ejemplo: 'En una ladera con 20 % de pendiente, dejar la tierra pelada entre mayo y octubre significa que el primer aguacero de noviembre '
+      + 'se lleva la capa más fértil. Sembrar alfalfa, tarwi o avena de cobertura, en surcos que sigan el contorno, la protege.',
+    usoPoseidon: 'Al registrar la parcela calculamos su pendiente y mostramos la alerta de erosión con cultivos de cobertura sugeridos. '
+      + 'En ladera, la comparación de rotaciones da más puntaje a las raíces profundas y castiga los meses de suelo desnudo.',
+    fuente: 'NASA SRTM (modelo de elevación de 30 m)',
+    visual: {
+      tipo: 'escala',
+      min: 0, max: 30, decimales: 0, unidad: '%',
+      colores: ['#eaf1fa', '#fef4d6', '#fac748', '#f28c28', '#7a1f3d'],
+      marcas: [
+        { valor: 2, etiqueta: 'Casi plano: riesgo bajo' },
+        { valor: 10, etiqueta: 'Ladera moderada: riesgo medio' },
+        { valor: 20, etiqueta: 'Ladera fuerte: riesgo alto' },
+      ],
+    },
+  },
+  {
+    id: 'sello-hidrico',
+    nombre: 'Sello de Gestión Hídrica Sostenible',
+    categoria: 'agua',
+    icono: 'gota',
+    corto: 'Distingue las cosechas de rotaciones que necesitan al menos 15 % menos riego que la rotación tradicional.',
+    explicacion: 'Comparamos el riego que pide la rotación del productor con el que pediría la rotación tradicional del valle (papa → maíz) '
+      + 'en el mismo lugar y con el mismo clima. Si necesita al menos 15 % menos, la oferta lleva el sello y muestra el porcentaje de ahorro.',
+    ejemplo: 'Si papa → maíz necesita 700 mm de riego por campaña y la rotación del productor, con cebada y avena sembradas en la época de lluvias, necesita 520 mm, '
+      + 'ahorra un 26 % y recibe el sello.',
+    usoPoseidon: 'Aparece en el catálogo de oferta y sirve de filtro para los compradores. Es una estimación con el clima típico de NASA POWER: '
+      + 'todavía no usa la humedad del suelo de SMAP ni la evapotranspiración medida por ECOSTRESS, y no mide el agua realmente aplicada.',
+    fuente: 'Calculado con datos de NASA POWER',
+    visual: {
+      tipo: 'balanza',
+      titulo: 'Riego por campaña (ejemplo)',
+      unidad: 'mm',
+      barras: [
+        { etiqueta: 'Papa → maíz', valor: 700, tono: 'naranja' },
+        { etiqueta: 'Rotación del productor', valor: 520, tono: 'azul' },
+      ],
+      conclusion: 'Ahorra 180 mm: un 26 % menos de riego.',
+    },
   },
 ];
 

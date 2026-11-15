@@ -28,7 +28,7 @@ test.before(async () => {
     env: {
       ...process.env, PORT: PUERTO, DEMO_PASSWORD: CLAVE, DB_HOST: '127.0.0.1', DB_PORT: '1',
       BACKUP_DIR: path.join(TEMP, 'respaldos'), VAPID_FILE: path.join(TEMP, 'vapid.json'), FOTOS_DIR: path.join(TEMP, 'fotos'),
-      ALERTAS_CADA_HORAS: '0', BACKUP_HORA: '', GOOGLE_DRIVE_CREDENTIALS: '', GOOGLE_DRIVE_FOLDER_ID: '',
+      ALERTAS_CADA_HORAS: '0', BACKUP_HORA: '', GOOGLE_DRIVE_CREDENTIALS: '', GOOGLE_DRIVE_FOLDER_ID: '', ELEVACION_URL: '', NDVI_URL: '',
     },
     stdio: 'ignore',
   });

@@ -47,6 +47,22 @@ export function TarjetaOferta({ o, children, extra }) {
       </div>
       {extra}
       <SelloAgua agua={o.agua} />
+      {o.sello?.otorgado && (
+        <div className="sello-hidrico">
+          <svg viewBox="0 0 32 32" aria-hidden="true">
+            <circle cx="16" cy="16" r="15" fill="#1e4e8c" />
+            <path d="M16 6c4.2 5 6.2 8.4 6.2 11.4a6.2 6.2 0 0 1-12.4 0C9.8 14.4 11.800 11 16 6z" fill="#fff" />
+            <path d="M12.800 17.600l2.300 2.300 4.300-4.600" fill="none" stroke="#1e4e8c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span>
+            <strong>Gestión Hídrica Sostenible <Termino id="sello-hidrico" soloIcono /></strong>
+            <small>Necesita cerca de un <b>{o.sello.ahorro_pct} %</b> menos de riego que la rotación tradicional (papa → maíz) en ese lugar. Estimado con NASA POWER.</small>
+          </span>
+        </div>
+      )}
+      {o.sello && !o.sello.otorgado && o.sello.ahorro_pct !== null && (
+        <p className="suave sin-sello">Ahorro de agua estimado frente a papa → maíz: {o.sello.ahorro_pct} %. El sello se otorga desde 15 %.</p>
+      )}
       <h4><Termino id="practicas-rotacion">Prácticas de rotación</Termino></h4>
       <ul className="practicas">
         {Object.entries(PRACTICAS_CORTAS).map(([k, texto]) => (

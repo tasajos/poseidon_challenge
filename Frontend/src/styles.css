@@ -434,3 +434,187 @@ i.marca-naranja { background: var(--naranja); border-radius: 50%; }
   .oferta { padding: 14px; }
   .fila-botones .principal, .fila-botones .secundario:not(.chico) { flex-basis: 100%; }
 }
+
+/* ---------- Modo de bajo consumo (HU-USR-06) ---------- */
+html.ligero body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; } /* no descarga fuentes */
+html.ligero .termino-i, html.ligero .termino-cuadro, html.ligero .leaflet-control-layers { font-family: inherit; }
+html.ligero .caja, html.ligero .tarjeta, html.ligero .stat, html.ligero .oferta { box-shadow: none; }
+.modo-ligero { background: none; border: 1.5px solid rgba(255, 255, 255, .6); color: #fff; border-radius: 99px; padding: 6px 14px; min-height: 40px; font-size: 13px; font-weight: 700; }
+.modo-ligero:hover { background: rgba(255, 255, 255, .15); }
+.modo-ligero.activo { background: var(--amarillo); border-color: var(--amarillo); color: var(--tinta); }
+.mapa-omitido { border: 2px dashed var(--linea); border-radius: 10px; padding: 14px; margin: 8px 0; color: var(--suave); font-size: 14px; text-align: center; }
+.mapa-cargando { display: grid; place-items: center; background: var(--fondo); color: var(--suave); font-size: 14px; }
+.resumen-ligero { margin-bottom: 22px; }
+.resumen-ligero h2 { font-size: 19px; }
+
+/* ---------- Comunes ---------- */
+.caja h3, .ficha-parcela h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .5px; color: var(--vino); margin: 18px 0 6px; }
+.caja h3 small { text-transform: none; letter-spacing: 0; color: var(--suave); font-weight: 600; margin-left: 6px; }
+.obligatorio { color: var(--vino); font-weight: 700; font-size: 12px; }
+.ayuda { display: block; color: var(--suave); font-weight: 400; font-size: 12px; margin-top: 2px; }
+input[aria-invalid=true], select[aria-invalid=true] { border-color: var(--vino); background: var(--vino-claro); }
+.no-disponible { color: var(--suave); font-style: italic; }
+.codigo { font: 700 12px/1.4 ui-monospace, Consolas, monospace; color: var(--suave); background: var(--fondo); border: 1px solid var(--linea); border-radius: 6px; padding: 1px 6px; white-space: nowrap; }
+.principal.sin-margen { margin-top: 0; margin-bottom: 12px; }
+.principal.chico { width: auto; min-height: 36px; padding: 4px 14px; font-size: 13px; margin-top: 0; }
+.con-margen { margin-top: 12px; }
+.stats.compactas { grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 12px 0; }
+.stats.compactas .stat { box-shadow: none; padding: 8px 12px; }
+.stats.compactas .stat b { font-size: 24px; }
+.filtros-fecha .campo { flex: 1; margin-top: 0; }
+.item .etiqueta { justify-self: start; margin-top: 4px; }
+
+/* ---------- Tabla comparativa y observación del técnico (HU-USR-06, HU-OPT-04) ---------- */
+.tabla-comparativa { font-size: 14px; }
+.tabla-comparativa th, .tabla-comparativa td { text-align: left; white-space: normal; vertical-align: top; padding: 8px 10px; }
+.tabla-comparativa thead th { background: var(--fondo); font-size: 13px; min-width: 150px; border-bottom: 3px solid var(--linea); }
+.tabla-comparativa thead th:first-child { min-width: 120px; background: none; }
+.tabla-comparativa thead th.mejor { border-bottom-color: var(--naranja); }
+.tabla-comparativa tbody th { font-weight: 600; color: var(--suave); font-size: 13px; }
+.tabla-comparativa .fila-criterio th { padding-left: 22px; font-weight: 400; }
+.tabla-comparativa .fila-criterio td { color: var(--suave); }
+.tabla-comparativa td { font-variant-numeric: tabular-nums; }
+.num-mejor { color: var(--azul); font-size: 18px; }
+.etiqueta.elegida { display: inline-block; margin-left: 6px; background: #e3f4ea; color: #1d6b3d; }
+.tarjeta.elegida { outline: 3px solid #2e9e5b; outline-offset: -1px; }
+.celda-observacion { display: grid; gap: 8px; justify-items: start; }
+.observacion-tecnico { background: var(--naranja-claro); border-left: 5px solid var(--naranja); border-radius: 8px; padding: 8px 10px; margin-top: 10px; font-size: 14px; display: grid; gap: 3px; justify-items: start; }
+.celda-observacion .observacion-tecnico { margin-top: 0; }
+.observacion-tecnico p { white-space: pre-wrap; overflow-wrap: anywhere; }
+.observacion-tecnico small { color: var(--suave); font-size: 12px; }
+.etiqueta.semillas-disponible { background: #e3f4ea; color: #1d6b3d; }
+.etiqueta.semillas-limitada { background: var(--amarillo-claro); color: var(--tinta); }
+.etiqueta.semillas-no_disponible { background: var(--vino-claro); color: var(--vino); }
+.form-observacion { width: 100%; min-width: 200px; }
+.form-observacion .campo:first-child { margin-top: 0; }
+
+/* ---------- Ficha de parcela (HU-USR-01, 02, 05; HU-OPT-01) ---------- */
+.etiqueta.erosion-bajo { background: #e3f4ea; color: #1d6b3d; }
+.etiqueta.erosion-medio { background: var(--amarillo-claro); color: var(--tinta); border: 1px solid var(--amarillo); }
+.etiqueta.erosion-alto { background: var(--vino); color: #fff; }
+.sello-terreno { display: flex; align-items: center; gap: 14px; padding: 10px 14px; border-radius: 12px; margin: 8px 0 10px; background: #e3f4ea; border-left: 6px solid #2e9e5b; }
+.sello-terreno > b { font-size: 30px; font-weight: 800; line-height: 1; white-space: nowrap; }
+.sello-terreno > span { display: grid; gap: 2px; }
+.sello-terreno small { color: var(--suave); font-size: 13px; }
+.sello-terreno.riesgo-medio { background: var(--amarillo-claro); border-left-color: var(--amarillo); }
+.sello-terreno.riesgo-alto { background: var(--vino-claro); border-left-color: var(--vino); }
+.sello-terreno.riesgo-alto > b, .sello-terreno.riesgo-alto strong { color: var(--vino); }
+.chips-info { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.chips-info li { border: 1.5px solid var(--linea); border-radius: 99px; padding: 4px 12px; font-size: 13px; color: var(--suave); }
+.chips-info li b { color: var(--tinta); }
+.linea-tiempo { display: grid; gap: 0; border-left: 3px solid var(--linea); margin: 6px 0 4px 6px; }
+.linea-tiempo li { position: relative; padding: 6px 0 8px 16px; display: grid; gap: 1px; font-size: 14px; }
+.linea-tiempo li::before { content: ''; position: absolute; left: -8px; top: 12px; width: 10px; height: 10px; border-radius: 50%; background: var(--azul); border: 2px solid var(--papel); }
+.linea-tiempo small { color: var(--suave); font-size: 13px; overflow-wrap: anywhere; }
+.fecha-linea { font-size: 12px; font-weight: 700; color: var(--suave); text-transform: uppercase; letter-spacing: .4px; }
+.fuentes { display: grid; gap: 8px; margin: 8px 0 10px; }
+.fuentes li { display: grid; grid-template-columns: 96px 1fr; gap: 10px; align-items: start; font-size: 14px; }
+.fuentes li > span:last-child { display: grid; }
+.fuentes small { color: var(--suave); font-size: 13px; }
+.fuentes li.falta small { color: var(--vino); font-weight: 600; }
+.etiqueta.origen-agricultor { background: var(--amarillo-claro); color: var(--tinta); text-align: center; }
+.etiqueta.origen-nasa { background: var(--azul); color: #fff; text-align: center; }
+.etiqueta.origen-gamc { background: var(--vino-claro); color: var(--vino); text-align: center; }
+.pasos-registro { display: flex; gap: 6px 18px; flex-wrap: wrap; padding: 0; margin: 0 0 14px; list-style: none; font-size: 14px; font-weight: 700; color: var(--suave); }
+.pasos-registro li { display: flex; align-items: center; }
+.pasos-registro .paso { background: var(--linea); }
+.pasos-registro li.actual { color: var(--tinta); }
+.pasos-registro li.actual .paso { background: var(--amarillo); }
+.medida { font-weight: 800; margin-top: 6px; }
+
+/* ---------- Gráficas ---------- */
+.viz { --serie-1: #2a6fbf; --serie-2: #cf6f14; margin: 8px 0 10px; }
+.viz-leyenda { display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 13px; color: var(--suave); margin-bottom: 4px; }
+.viz-leyenda li { display: flex; align-items: center; gap: 6px; }
+.viz-trazo { display: inline-block; width: 16px; height: 3px; border-radius: 2px; flex: none; }
+.viz-lienzo { position: relative; max-width: 620px; }
+.viz-lienzo svg { display: block; width: 100%; height: auto; overflow: visible; touch-action: pan-y; }
+.viz-rejilla { stroke: var(--linea); stroke-width: 1; }
+.viz-umbral { stroke: var(--suave); stroke-width: 1; }
+.viz-cruz { stroke: var(--suave); stroke-width: 1; }
+.viz-eje { fill: var(--suave); font-size: 11px; font-variant-numeric: tabular-nums; }
+.viz-etiqueta { fill: var(--suave); font-size: 12px; }
+.viz-valor { fill: var(--tinta); font-weight: 800; }
+.viz-lienzo rect:focus-visible { outline: 3px solid var(--naranja); }
+.viz-tooltip { position: absolute; top: 4px; transform: translateX(-50%); pointer-events: none; background: var(--papel); border: 1px solid var(--linea); border-radius: 8px; box-shadow: 0 6px 18px rgba(31, 42, 68, .18); padding: 6px 10px; font-size: 13px; display: grid; gap: 2px; white-space: nowrap; z-index: 2; }
+.viz-tooltip > span { display: flex; align-items: center; gap: 6px; color: var(--suave); }
+.viz-tooltip strong { color: var(--tinta); font-variant-numeric: tabular-nums; }
+.viz-tabla { margin-top: 4px; }
+.viz-tabla table { max-width: 360px; }
+.viz-tabla th, .viz-tabla td { text-align: right; }
+.viz-tabla th:first-child { text-align: left; }
+.medidores { display: grid; gap: 10px; margin: 10px 0; }
+.medidores li { display: grid; grid-template-columns: minmax(110px, 1.2fr) 2fr auto; gap: 10px; align-items: center; font-size: 14px; border-radius: 8px; padding: 2px 4px; }
+.medidores li:hover { background: var(--fondo); }
+.medidor-nombre { display: grid; font-weight: 700; }
+.medidor-nombre small { font-weight: 400; color: var(--suave); font-size: 12px; }
+.medidor-pista { height: 12px; background: #dbe7f6; border-radius: 0 4px 4px 0; overflow: hidden; }
+.medidor-relleno { display: block; height: 100%; background: #2a6fbf; border-radius: 0 4px 4px 0; }
+.medidor-cifra { font-variant-numeric: tabular-nums; min-width: 48px; text-align: right; }
+
+/* ---------- Sello hídrico (HU-CLI-04) ---------- */
+.sello-hidrico { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 8px 10px; border: 2px solid var(--azul); border-radius: 12px; background: var(--papel); }
+.sello-hidrico svg { width: 38px; height: 38px; flex: none; }
+.sello-hidrico > span { display: grid; gap: 1px; }
+.sello-hidrico strong { font-size: 14px; color: var(--azul-osc); }
+.sello-hidrico small { font-size: 12px; color: var(--suave); }
+.sin-sello { font-size: 12px; margin-top: 6px; }
+
+/* ---------- Administración (HU-ADM-01) ---------- */
+.caja.pendientes { border-top: 6px solid var(--amarillo); }
+.estado-cuenta { font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 99px; white-space: nowrap; background: #e3f4ea; color: #1d6b3d; }
+.estado-cuenta.pendiente { background: var(--amarillo-claro); color: var(--tinta); border: 1px solid var(--amarillo); }
+.estado-cuenta.inactiva { background: var(--fondo); color: var(--suave); border: 1px solid var(--linea); }
+
+/* ---------- Monitoreo regional (HU-MON-01 a 04) ---------- */
+.etiqueta.tipo-observado { background: var(--azul-claro); color: var(--azul-osc); }
+.etiqueta.tipo-estimado { background: var(--amarillo-claro); color: var(--tinta); }
+.etiqueta.tipo-declarado { background: var(--fondo); color: var(--suave); border: 1px solid var(--linea); }
+.etiqueta.tipo-simulado { display: inline-block; background: var(--vino-claro); color: var(--vino); margin-bottom: 4px; }
+.agrupa { color: var(--suave); font-weight: 400; }
+.control-escenario { display: grid; gap: 2px; margin-top: 16px; font-size: 14px; }
+.control-escenario > span { display: flex; justify-content: space-between; font-weight: 600; }
+.control-escenario b { font-size: 18px; font-variant-numeric: tabular-nums; }
+.control-escenario input { accent-color: var(--vino); min-height: 36px; width: 100%; }
+.control-escenario small { color: var(--suave); font-size: 12px; }
+.control-escenario + .secundario { margin-top: 14px; }
+.leyenda-niveles { display: grid; gap: 6px; font-size: 13px; margin: 6px 0 10px; color: var(--suave); }
+.leyenda-niveles li { display: flex; align-items: baseline; gap: 8px; }
+.leyenda-niveles b { color: var(--tinta); }
+.leyenda-niveles i, .nivel i { display: inline-block; width: 14px; height: 14px; border-radius: 50%; flex: none; border: 2px solid var(--papel); box-shadow: 0 0 0 1px var(--linea); transform: translateY(2px); }
+.leyenda-niveles.en-linea { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.nivel { display: inline-flex; align-items: baseline; gap: 6px; font-weight: 700; }
+.recalculando { opacity: .55; transition: opacity .15s; }
+.cifra-heroe { font-size: 52px; font-weight: 800; line-height: 1.1; color: var(--azul); }
+.filtros-periodo .campo { margin-top: 0; }
+.filtros-periodo .chips { margin-top: 4px; }
+
+@media (max-width: 700px) {
+  .apilable td[data-t=""]::before { content: none; }
+  .apilable td[colspan] { justify-content: flex-start; text-align: left; color: var(--suave); }
+}
+@media (max-width: 560px) {
+  .modo-ligero { order: 3; flex-basis: 100%; }
+  .quien { flex-wrap: wrap; justify-content: flex-end; }
+  .fuentes li { grid-template-columns: 1fr; gap: 2px; }
+  .fuentes .etiqueta { justify-self: start; }
+  .medidores li { grid-template-columns: 1fr auto; }
+  .medidor-pista { grid-column: 1 / -1; grid-row: 2; }
+  .stats.compactas { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .cifra-heroe { font-size: 40px; }
+  .tabla-comparativa thead th { min-width: 130px; }
+}
+
+/* En el teléfono las tres estrategias caben a lo ancho: nada queda escondido a la derecha */
+@media (max-width: 560px) {
+  .comparativa { padding: 12px 8px; }
+  .comparativa h2 { font-size: 17px; padding: 0 4px; }
+  .tabla-comparativa { table-layout: fixed; font-size: 13px; }
+  .tabla-comparativa th, .tabla-comparativa td { padding: 7px 4px; overflow-wrap: anywhere; }
+  .tabla-comparativa thead th, .tabla-comparativa thead th:first-child { min-width: 0; font-size: 12px; }
+  .tabla-comparativa thead th:first-child, .tabla-comparativa tbody th { width: 29%; padding-right: 8px; }
+  .tabla-comparativa .fila-criterio th { padding-left: 10px; }
+  .tabla-comparativa .secundario.chico { padding: 4px 6px; font-size: 12px; }
+  .tabla-comparativa .termino-i { display: none; } /* el término sigue siendo tocable por su texto */
+  .etiqueta.elegida { display: block; margin: 4px 0 0; width: fit-content; }
+}

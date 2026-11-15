@@ -1,6 +1,39 @@
-// Service worker de Poseidon: muestra las alertas climáticas aunque la página esté cerrada.
+// Service worker de Poseidon:
+//  - muestra las alertas climáticas aunque la página esté cerrada (HU-USR-03);
+//  - guarda la aplicación en el dispositivo para abrirla con poca o ninguna señal (HU-USR-06).
+// Nunca guarda respuestas de /api: los datos se piden siempre al servidor.
+const CACHE = 'poseidon-app-v1';
+
 self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
+self.addEventListener('activate', (e) => e.waitUntil(
+  caches.keys().then((claves) => Promise.all(claves.filter((c) => c !== CACHE).map((c) => caches.delete(c)))).then(() => self.clients.claim()),
+));
+
+self.addEventListener('fetch', (e) => {
+  const url = new URL(e.request.url);
+  if (e.request.method !== 'GET' || url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
+  // Archivos con huella en el nombre (/assets/…): no cambian nunca, así que primero la copia guardada.
+  if (url.pathname.startsWith('/assets/')) {
+    e.respondWith(caches.open(CACHE).then(async (cache) => {
+      const guardada = await cache.match(e.request);
+      if (guardada) return guardada;
+      const r = await fetch(e.request);
+      if (r.ok) cache.put(e.request, r.clone());
+      return r;
+    }));
+    return;
+  }
+  // La página: primero la red (para recibir versiones nuevas); sin señal, la copia guardada.
+  if (e.request.mode === 'navigate') {
+    e.respondWith(fetch(e.request).then((r) => {
+      if (r.ok) {
+        const copia = r.clone();
+        caches.open(CACHE).then((cache) => cache.put('/', copia));
+      }
+      return r;
+    }).catch(() => caches.match('/').then((r) => r || Response.error())));
+  }
+});
 
 self.addEventListener('push', (e) => {
   let d;

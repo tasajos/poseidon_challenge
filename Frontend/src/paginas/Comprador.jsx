@@ -25,7 +25,7 @@ export default function Comprador() {
   );
 }
 
-const SIN_FILTROS = { cultivos: [], practicas: [], verificada: false, agua: '', zona: '' };
+const SIN_FILTROS = { cultivos: [], practicas: [], verificada: false, sello: false, agua: '', zona: '' };
 
 function Oferta({ onEnviada }) {
   const [filtros, setFiltros] = useState(SIN_FILTROS);
@@ -33,7 +33,7 @@ function Oferta({ onEnviada }) {
   const { datos, error, recargar } = useDatos(() => api.ofertas(filtros), [JSON.stringify(filtros)]);
   const poner = (k, v) => setFiltros({ ...filtros, [k]: v });
   const alternar = (k, valor) => poner(k, filtros[k].includes(valor) ? filtros[k].filter((x) => x !== valor) : [...filtros[k], valor]);
-  const activos = filtros.cultivos.length + filtros.practicas.length + (filtros.verificada ? 1 : 0) + (filtros.agua ? 1 : 0) + (filtros.zona ? 1 : 0);
+  const activos = filtros.cultivos.length + filtros.practicas.length + (filtros.verificada ? 1 : 0) + (filtros.sello ? 1 : 0) + (filtros.agua ? 1 : 0) + (filtros.zona ? 1 : 0);
 
   if (error) return <p className="error">{error}</p>;
   if (!datos) return <p className="cargando">Cargando…</p>;
@@ -66,6 +66,8 @@ function Oferta({ onEnviada }) {
           detalle="Un técnico de Poseidon revisó la rotación de la parcela">Solo verificadas por un técnico</Interruptor>
 
         <h3>Uso eficiente del agua</h3>
+        <Interruptor marcado={filtros.sello} onCambiar={(v) => poner('sello', v)}
+          detalle="Al menos 15 % menos riego que la rotación tradicional">Solo con sello de Gestión Hídrica Sostenible</Interruptor>
         <div className="chips" role="group" aria-label="Uso eficiente del agua">
           {[['', 'Cualquiera'], ['media', 'Medio o alto'], ['alta', 'Solo alto']].map(([v, t]) => (
             <button key={v} type="button" aria-pressed={filtros.agua === v} className={filtros.agua === v ? 'activa' : ''}
@@ -84,7 +86,7 @@ function Oferta({ onEnviada }) {
 
       <section>
         <p className="resultado-filtros" role="status">
-          {total === 0 ? 'Todavía no hay oferta publicada.' : `${ofertas.length} de ${total} ofertas`}
+          {total === 0 ? 'No hay ofertas registradas por ahora. Aparecerán aquí cuando los agricultores publiquen su cosecha.' : `${ofertas.length} de ${total} ofertas`}
           {ofertas.length > 1 && ' · ordenadas por uso eficiente del agua'}
         </p>
         {ofertas.length > 0 && (

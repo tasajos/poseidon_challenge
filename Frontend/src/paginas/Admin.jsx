@@ -15,6 +15,8 @@ export default function Admin({ usuario }) {
   const opciones = [
     gestiona && ['usuarios', 'Usuarios'],
     gestiona && ['permisos', 'Roles y permisos'],
+    puede(usuario, 'asignar') && ['asignacion', 'Parcelas y técnicos'],
+    gestiona && ['auditoria', 'Auditoría'],
     respalda && ['respaldos', 'Respaldos'],
     ['sistema', 'Sistema'],
     ['catalogo', 'Cultivos'],
@@ -27,6 +29,8 @@ export default function Admin({ usuario }) {
       <Pestanas valor={vista} onCambiar={setVista} opciones={opciones} />
       {vista === 'usuarios' && <Usuarios yo={usuario} />}
       {vista === 'permisos' && <Permisos />}
+      {vista === 'asignacion' && <Asignaciones />}
+      {vista === 'auditoria' && <Auditoria />}
       {vista === 'respaldos' && <Respaldos />}
       {vista === 'sistema' && <Sistema />}
       {vista === 'catalogo' && <Catalogo />}
@@ -65,70 +69,205 @@ function useAccion(recargar) {
   return { accion, avisos, ocupado };
 }
 
+const CON_APROBACION = ['administrador', 'operativo', 'monitoreo'];
+const estadoDe = (u) => (u.pendiente ? 'pendiente' : u.activo ? 'activa' : 'inactiva');
+const ESTADO_CUENTA = { pendiente: 'Pendiente de aprobación', activa: 'Activa', inactiva: 'Inactiva' };
+
+// Registro y habilitación de cuentas (HU-ADM-01).
 function Usuarios({ yo }) {
   const { datos, error, recargar } = useDatos(api.usuarios);
   const lista = datos || [];
-  const vacio = { nombre: '', email: '', password: '', rol: 'cliente' };
+  const pendientes = lista.filter((u) => u.pendiente);
+  const vacio = { nombre: '', email: '', telefono: '', password: '', rol: 'cliente' };
   const [nuevo, setNuevo] = useState(vacio);
+  const [registro, setRegistro] = useState({ ok: '', error: '', campo: '', cargando: false });
   const { accion, avisos } = useAccion(recargar);
-  const campo = (k) => (e) => setNuevo({ ...nuevo, [k]: e.target.value });
+  const campo = (k) => (e) => { setNuevo({ ...nuevo, [k]: e.target.value }); if (registro.campo === k) setRegistro({ ...registro, error: '', campo: '' }); };
+  const falla = (k) => (registro.campo === k ? { 'aria-invalid': true, 'aria-describedby': 'error-registro' } : {});
 
-  function crear(e) {
+  async function crear(e) {
     e.preventDefault();
-    accion(api.crearUsuario(nuevo).then(() => setNuevo(vacio)), 'Usuario creado.');
+    setRegistro({ ok: '', error: '', campo: '', cargando: true });
+    try {
+      const r = await api.crearUsuario(nuevo);
+      setNuevo(vacio);
+      setRegistro({ ok: r.mensaje, error: '', campo: '', cargando: false });
+      recargar();
+    } catch (err) { setRegistro({ ok: '', error: err.message, campo: err.campo || '', cargando: false }); }
   }
 
   return (
     <div className="dos-columnas inversa">
-      <div className="caja">
-        <h2>Usuarios</h2>
-        <p className="suave">El rol define qué vistas y datos ve cada persona. Ajuste lo que puede hacer cada rol en “Roles y permisos”.</p>
-        {error && <p className="error">{error}</p>}
-        <div className="tabla-scroll">
-          <table className="tabla apilable">
-            <thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th><th>Acceso</th><th>Alta</th></tr></thead>
-            <tbody>
-              {lista.map((u) => (
-                <tr key={u.id} className={u.activo ? '' : 'inactivo'}>
-                  <td data-t="Nombre"><b>{u.nombre}</b></td><td data-t="Correo">{u.email}</td>
-                  <td data-t="Rol">
-                    <select value={u.rol} disabled={u.id === yo.id} aria-label={`Rol de ${u.nombre}`}
-                      onChange={(e) => accion(api.actualizarUsuario(u.id, { rol: e.target.value }), 'Rol actualizado.')}>
-                      {ROLES.map((r) => <option key={r} value={r}>{QUIEN[r]}</option>)}
-                    </select>
-                  </td>
-                  <td data-t="Acceso">
-                    <button className="secundario chico" disabled={u.id === yo.id}
-                      onClick={() => accion(api.actualizarUsuario(u.id, { activo: !u.activo }), u.activo ? 'Usuario desactivado.' : 'Usuario activado.')}>
-                      {u.activo ? 'Desactivar' : 'Activar'}
-                    </button>
-                  </td>
-                  <td data-t="Alta">{fecha(u.creado_en)}</td>
-                </tr>
+      <div>
+        {pendientes.length > 0 && (
+          <div className="caja pendientes">
+            <h2>Cuentas pendientes de aprobación <small>{pendientes.length}</small></h2>
+            <p className="suave">Las cuentas de técnico, gestor y administrador no pueden ingresar hasta que un responsable las aprueba. Si hay otro administrador activo, no puede aprobar las que usted mismo registró.</p>
+            <ul className="solicitudes">
+              {pendientes.map((u) => (
+                <li key={u.id} className="solicitud">
+                  <div className="solicitud-cabeza"><b>{u.nombre}</b><span className="estado-solicitud pendiente">{QUIEN[u.rol]}</span></div>
+                  <p className="suave">{u.email}{u.telefono ? ` · ${u.telefono}` : ''} · registrada el {fecha(u.creado_en)}{u.creado_por === yo.id ? ' por usted' : ''}</p>
+                  <div className="fila-botones">
+                    <button type="button" className="secundario" onClick={() => accion(api.aprobarUsuario(u.id, false), `Se rechazó la cuenta de ${u.nombre}.`)}>Rechazar</button>
+                    <button type="button" className="principal" onClick={() => accion(api.aprobarUsuario(u.id, true), `Cuenta de ${u.nombre} aprobada: ya puede ingresar.`)}>Aprobar</button>
+                  </div>
+                </li>
               ))}
-            </tbody>
-          </table>
+            </ul>
+          </div>
+        )}
+        <div className="caja">
+          <h2>Usuarios</h2>
+          <p className="suave">El rol define qué vistas y datos ve cada persona. Ajuste lo que puede hacer cada rol en “Roles y permisos”.</p>
+          {error && <p className="error">{error}</p>}
+          <div className="tabla-scroll">
+            <table className="tabla apilable">
+              <thead><tr><th>Nombre</th><th>Contacto</th><th>Rol</th><th>Estado</th><th>Acceso</th><th>Alta</th></tr></thead>
+              <tbody>
+                {lista.map((u) => (
+                  <tr key={u.id} className={u.activo ? '' : 'inactivo'}>
+                    <td data-t="Nombre"><b>{u.nombre}</b></td>
+                    <td data-t="Contacto">{u.email}{u.telefono && <><br />{u.telefono}</>}</td>
+                    <td data-t="Rol">
+                      <select value={u.rol} disabled={u.id === yo.id || u.pendiente} aria-label={`Rol de ${u.nombre}`}
+                        onChange={(e) => accion(api.actualizarUsuario(u.id, { rol: e.target.value }),
+                          (r) => (r.pendiente ? 'Rol actualizado. Como tiene privilegios, la cuenta queda pendiente de aprobación.' : 'Rol actualizado.'))}>
+                        {ROLES.map((r) => <option key={r} value={r}>{QUIEN[r]}</option>)}
+                      </select>
+                    </td>
+                    <td data-t="Estado"><span className={`estado-cuenta ${estadoDe(u)}`}>{ESTADO_CUENTA[estadoDe(u)]}</span></td>
+                    <td data-t="Acceso">
+                      {!u.pendiente && (
+                        <button className="secundario chico" disabled={u.id === yo.id}
+                          onClick={() => accion(api.actualizarUsuario(u.id, { activo: !u.activo }), u.activo ? 'Usuario desactivado.' : 'Usuario activado.')}>
+                          {u.activo ? 'Desactivar' : 'Activar'}
+                        </button>
+                      )}
+                    </td>
+                    <td data-t="Alta">{fecha(u.creado_en)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {avisos}
         </div>
-        {avisos}
       </div>
 
-      <form className="caja" onSubmit={crear}>
-        <h2>Nuevo usuario</h2>
-        <label className="campo">Nombre<input value={nuevo.nombre} onChange={campo('nombre')} maxLength={80} required /></label>
-        <label className="campo">Correo<input type="email" value={nuevo.email} onChange={campo('email')} required /></label>
-        <label className="campo">Contraseña (mínimo 8 caracteres)
-          <input type="password" value={nuevo.password} onChange={campo('password')} minLength={8} autoComplete="new-password" required />
+      <form className="caja" onSubmit={crear} noValidate={false}>
+        <h2>Registrar usuario</h2>
+        <p className="suave">Los campos con <span className="obligatorio">(obligatorio)</span> son necesarios para guardar.</p>
+        <label className="campo">Nombre <span className="obligatorio">(obligatorio)</span>
+          <input value={nuevo.nombre} onChange={campo('nombre')} maxLength={80} required {...falla('nombre')} />
         </label>
-        <label className="campo">Rol
-          <select value={nuevo.rol} onChange={campo('rol')}>{ROLES.map((r) => <option key={r} value={r}>{QUIEN[r]}</option>)}</select>
+        <label className="campo">Correo <span className="obligatorio">(obligatorio)</span>
+          <input type="email" value={nuevo.email} onChange={campo('email')} required autoComplete="off" {...falla('email')} />
+          <small className="ayuda">Es el identificador de la cuenta: no puede repetirse.</small>
         </label>
-        <button className="principal">Crear usuario</button>
+        <label className="campo">Teléfono (opcional)
+          <input type="tel" inputMode="tel" value={nuevo.telefono} onChange={campo('telefono')} placeholder="+591 70000000" {...falla('telefono')} />
+        </label>
+        <label className="campo">Rol <span className="obligatorio">(obligatorio)</span>
+          <select value={nuevo.rol} onChange={campo('rol')} {...falla('rol')}>{ROLES.map((r) => <option key={r} value={r}>{QUIEN[r]}</option>)}</select>
+        </label>
+        {CON_APROBACION.includes(nuevo.rol) && (
+          <p className="aviso">Este rol tiene privilegios: la cuenta quedará <b>pendiente</b> hasta que un responsable la apruebe.</p>
+        )}
+        <label className="campo">Contraseña inicial <span className="obligatorio">(obligatorio)</span>
+          <input type="password" value={nuevo.password} onChange={campo('password')} minLength={8} autoComplete="new-password" required {...falla('password')} />
+          <small className="ayuda">Mínimo 8 caracteres. No se muestra ni se guarda en la auditoría.</small>
+        </label>
+        <button className="principal" disabled={registro.cargando}>{registro.cargando ? 'Guardando…' : 'Registrar usuario'}</button>
+        {registro.ok && <p className="exito" role="status">{registro.ok}</p>}
+        {registro.error && <p className="error" role="alert" id="error-registro">{registro.error}</p>}
       </form>
     </div>
   );
 }
 
-// Matriz rol × permiso. Cada casilla se guarda al momento y rige en la siguiente petición del usuario.
+// Asignación de parcelas a técnicos (HU-OPT-01).
+function Asignaciones() {
+  const parcelas = useDatos(() => api.parcelas('todas'));
+  const usuarios = useDatos(api.usuarios);
+  const { accion, avisos } = useAccion(parcelas.recargar);
+  if (parcelas.error) return <p className="error">{parcelas.error}</p>;
+  if (!parcelas.datos || !usuarios.datos) return <p className="cargando">Cargando…</p>;
+  const tecnicos = usuarios.datos.filter((u) => u.rol === 'operativo' && u.activo);
+  const lista = parcelas.datos.parcelas;
+  return (
+    <div className="caja">
+      <h2>Parcelas y técnico asignado</h2>
+      <p className="suave">Cada técnico ve solo las parcelas que tiene asignadas. Al registrarse, una parcela se asigna sola al técnico con menos carga; aquí puede cambiarla.</p>
+      {!lista.length && <p className="suave">Todavía no hay parcelas registradas.</p>}
+      {lista.length > 0 && (
+        <div className="tabla-scroll">
+          <table className="tabla apilable">
+            <thead><tr><th>Parcela</th><th>Agricultor</th><th>Zona</th><th>Técnico asignado</th></tr></thead>
+            <tbody>
+              {lista.map((p) => (
+                <tr key={p.id}>
+                  <td data-t="Parcela"><b>{p.nombre}</b> <span className="codigo">{p.codigo}</span></td>
+                  <td data-t="Agricultor">{p.agricultor}</td>
+                  <td data-t="Zona">{p.zona}</td>
+                  <td data-t="Técnico asignado">
+                    <select value={p.tecnico_id ?? ''} aria-label={`Técnico de ${p.nombre}`}
+                      onChange={(e) => accion(api.asignarParcela(p.id, e.target.value === '' ? null : Number(e.target.value)), `${p.nombre}: asignación actualizada.`)}>
+                      <option value="">Sin asignar</option>
+                      {tecnicos.map((t) => <option key={t.id} value={t.id}>{t.nombre}</option>)}
+                      {p.tecnico_id && !tecnicos.some((t) => t.id === p.tecnico_id) && <option value={p.tecnico_id}>{p.tecnico} (inactivo)</option>}
+                    </select>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {avisos}
+    </div>
+  );
+}
+
+const ACCIONES = {
+  'usuario.registrado': 'Registró la cuenta', 'usuario.aprobado': 'Aprobó la cuenta', 'usuario.rechazado': 'Rechazó la cuenta',
+  'usuario.rol': 'Cambió el rol de', 'usuario.activado': 'Activó la cuenta', 'usuario.desactivado': 'Desactivó la cuenta',
+  'permisos.cambiados': 'Cambió los permisos del rol', 'respaldo.restaurado': 'Restauró el respaldo', 'parcela.asignada': 'Asignó la parcela',
+};
+const detalleTexto = (d) => (d ? Object.entries(d).filter(([, v]) => v !== null && v !== '' && !(Array.isArray(v) && !v.length))
+  .map(([k, v]) => `${k.replace(/_/g, ' ')}: ${Array.isArray(v) ? v.join(', ') : v}`).join(' · ') : '');
+
+// Registro de auditoría (HU-ADM-01): quién hizo qué. Nunca incluye contraseñas.
+function Auditoria() {
+  const { datos, error } = useDatos(api.auditoria);
+  if (error) return <p className="error">{error}</p>;
+  if (!datos) return <p className="cargando">Cargando…</p>;
+  return (
+    <div className="caja">
+      <h2>Auditoría</h2>
+      <p className="suave">Registros, aprobaciones, cambios de rol y de permisos, asignaciones y restauraciones. No se guardan contraseñas ni credenciales.</p>
+      {!datos.length && <p className="suave">Aún no hay eventos registrados.</p>}
+      {datos.length > 0 && (
+        <div className="tabla-scroll">
+          <table className="tabla apilable">
+            <thead><tr><th>Cuándo</th><th>Quién</th><th>Qué hizo</th><th>Detalle</th></tr></thead>
+            <tbody>
+              {datos.map((a) => (
+                <tr key={a.id}>
+                  <td data-t="Cuándo">{fechaHora(a.creado_en)}</td>
+                  <td data-t="Quién">{a.actor}</td>
+                  <td data-t="Qué hizo">{ACCIONES[a.accion] || a.accion} <b>{a.objeto}</b></td>
+                  <td data-t="Detalle">{detalleTexto(a.detalle) || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Permisos() {
   const { datos, error, recargar } = useDatos(api.permisos);
   const { accion, avisos, ocupado } = useAccion(recargar);

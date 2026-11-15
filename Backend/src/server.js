@@ -3,7 +3,10 @@ import cors from 'cors';
 import 'dotenv/config';
 import * as db from './db.js';
 import { ROLES, hashPassword, verificarPassword, crearToken, requiereSesion, requierePermiso, tienePermiso, limiteIngreso } from './auth.js';
-import { PERMISOS, FIJOS, esPermiso } from './permisos.js';
+import { PERMISOS, FIJOS, ROLES_CON_APROBACION, esPermiso } from './permisos.js';
+import { registrarRutas, puedeVerParcela } from './rutas.js';
+import { prepararParcela } from './parcelas.js';
+import { riesgoErosion } from './terreno.js';
 import { climatologia } from './power.js';
 import { indicadoresMensuales } from './clima.js';
 import { compararRotaciones, CRITERIOS } from './rotacion.js';
@@ -53,9 +56,10 @@ app.get('/api/health', (_req, res) => res.json({ ok: true }));
 app.post('/api/auth/login', limiteIngreso, ruta(async (req, res) => {
   const email = String(req.body?.email || '').trim().toLowerCase();
   const u = await db.usuarioPorEmail(email);
-  if (!u || !u.activo || !verificarPassword(req.body?.password || '', u.password_hash)) {
-    throw error(401, 'Correo o contraseña incorrectos');
-  }
+  const claveCorrecta = Boolean(u) && verificarPassword(req.body?.password || '', u.password_hash);
+  // El aviso de "pendiente" solo se da a quien conoce la contraseña: no revela qué cuentas existen.
+  if (claveCorrecta && u.pendiente) throw error(403, 'Su cuenta está pendiente de aprobación. Un responsable debe habilitarla antes de que pueda ingresar.');
+  if (!claveCorrecta || !u.activo) throw error(401, 'Correo o contraseña incorrectos');
   res.json({
     token: crearToken(u),
     usuario: { id: u.id, nombre: u.nombre, email: u.email, rol: u.rol, permisos: await db.permisosDeRol(u.rol) },
@@ -74,10 +78,16 @@ app.get('/api/clima', sesion, ruta(async (req, res) => {
 }));
 
 // ---------- Evaluaciones ----------
-// Cuerpo: { nombre?, lat, lon, rotacion: ["papa","maiz"], prioridades: { agua: 0-5, ... } }
+// Cuerpo: { parcela_id | (nombre?, lat, lon), rotacion: ["papa","maiz"], prioridades: { agua: 0-5, ... } }
+// Con parcela_id evalúa una parcela registrada; con lat y lon registra una parcela rápida solo con su ubicación.
 app.post('/api/evaluar', sesion, requierePermiso('evaluar'), ruta(async (req, res) => {
   const { rotacion, prioridades = {}, nombre } = req.body || {};
-  const [lat, lon] = coordenadas(req.body?.lat, req.body?.lon);
+  let parcela = null;
+  if (req.body?.parcela_id !== undefined && req.body?.parcela_id !== null) {
+    parcela = await db.obtenerParcela(req.body.parcela_id);
+    if (!parcela || parcela.usuario_id !== req.usuario.id) throw error(404, 'Parcela no encontrada');
+  }
+  const [lat, lon] = parcela ? [parcela.lat, parcela.lon] : coordenadas(req.body?.lat, req.body?.lon);
   if (!Array.isArray(rotacion) || rotacion.length < 2 || rotacion.length > 4
     || new Set(rotacion).size !== rotacion.length) {
     throw error(400, 'La rotación debe tener de 2 a 4 cultivos distintos');
@@ -91,89 +101,98 @@ app.post('/api/evaluar', sesion, requierePermiso('evaluar'), ruta(async (req, re
   const meses = indicadoresMensuales(lat, base);
   const recientes = await db.listarIncidencias({ desde: new Date(Date.now() - VIGENCIA_DIAS * 864e5) });
   const plagas = presionDePlagas(recientes, lat, lon, cultivos);
-  const estrategias = compararRotaciones(rotacion, cultivos, meses, pesos, plagas);
+  if (!parcela) {
+    const id = await db.crearParcela({
+      usuarioId: req.usuario.id, nombre: String(nombre || '').trim().slice(0, 80) || 'Parcela sin nombre', lat, lon,
+    });
+    parcela = await prepararParcela(await db.obtenerParcela(id), 0); // terreno y NDVI siguen en segundo plano
+  }
+  // En ladera (HU-USR-05) la comparación premia raíces profundas y suelo cubierto.
+  const riesgo = riesgoErosion(parcela.pendiente_pct);
+  const terreno = riesgo ? { pendiente_pct: parcela.pendiente_pct, riesgo } : null;
+  const estrategias = compararRotaciones(rotacion, cultivos, meses, pesos, plagas, terreno);
   const id = await db.guardarEvaluacion({
-    usuarioId: req.usuario.id, nombre: String(nombre || '').trim().slice(0, 80) || 'Parcela sin nombre',
-    lat, lon, rotacion, prioridades: pesos, fuenteClima: base.fuente, estrategias,
+    parcelaId: parcela.id, rotacion, prioridades: pesos, fuenteClima: base.fuente, estrategias,
   });
-  res.json({ id, fuenteClima: base.fuente, clima: meses, estrategias, plagas });
+  res.json({ id, parcela_id: parcela.id, fuenteClima: base.fuente, clima: meses, estrategias, plagas, terreno });
 }));
 
-// Sin el permiso ver_todas cada persona ve solo sus parcelas. ?propias=1 pide solo las propias.
+// Qué evaluaciones ve cada persona: con ver_todas, todas; un técnico (revisar), las de sus parcelas
+// asignadas; los demás, las propias. ?propias=1 pide solo las propias.
 const verTodas = (u) => tienePermiso(u, 'ver_todas');
 
 app.get('/api/evaluaciones', sesion, ruta(async (req, res) => {
-  const propias = req.query.propias === '1' || !verTodas(req.usuario);
-  res.json((await db.listarEvaluaciones(propias ? { usuarioId: req.usuario.id } : {})).map(resumir));
+  const u = req.usuario;
+  const filtro = req.query.propias === '1' ? { usuarioId: u.id }
+    : verTodas(u) ? {} : tienePermiso(u, 'revisar') ? { tecnicoId: u.id } : { usuarioId: u.id };
+  res.json((await db.listarEvaluaciones(filtro)).map(resumir));
 }));
 
 app.get('/api/evaluaciones/:id', sesion, ruta(async (req, res) => {
   const e = await db.obtenerEvaluacion(req.params.id);
-  if (!e || (!verTodas(req.usuario) && e.usuario_id !== req.usuario.id)) {
-    throw error(404, 'Evaluación no encontrada');
-  }
-  res.json(e);
+  if (!e || !puedeVerParcela(req.usuario, e)) throw error(404, 'Evaluación no encontrada');
+  // Observaciones locales del técnico sobre cada estrategia (HU-OPT-04)
+  const validaciones = (await db.listarValidaciones({ evaluacionIds: [e.id] }))
+    .map((v) => ({ id: v.id, estrategia: v.estrategia, semillas: v.semillas, observacion: v.observacion, tecnico: v.tecnico, creado_en: v.creado_en }));
+  res.json({ ...e, validaciones });
 }));
 
 app.patch('/api/evaluaciones/:id/revision', sesion, requierePermiso('revisar'), ruta(async (req, res) => {
   const nota = String(req.body?.nota || '').trim().slice(0, 2000);
   if (!nota) throw error(400, 'Escriba una nota técnica');
   const e = await db.obtenerEvaluacion(req.params.id);
-  if (!e || (!verTodas(req.usuario) && e.usuario_id !== req.usuario.id)) throw error(404, 'Evaluación no encontrada');
+  if (!e || !puedeVerParcela(req.usuario, e)) throw error(404, 'Evaluación no encontrada');
   await db.revisarEvaluacion(req.params.id, { nota, revisorId: req.usuario.id });
   res.json({ ok: true });
-}));
-
-// ---------- Monitoreo y reportes regionales ----------
-app.get('/api/monitoreo', sesion, requierePermiso('reportes'), ruta(async (_req, res) => {
-  const evaluaciones = (await db.listarEvaluaciones()).map(resumir);
-  const usuarios = await db.listarUsuarios();
-  const alertas = [];
-  for (const e of evaluaciones) {
-    if (e.resumen.deficit_agua_mm > 400) {
-      alertas.push({ id: e.id, parcela: e.parcela, tipo: 'agua', texto: `Déficit de agua alto: ${e.resumen.deficit_agua_mm} mm por campaña` });
-    }
-    for (const h of e.resumen.heladas) {
-      alertas.push({ id: e.id, parcela: e.parcela, tipo: 'helada', texto: `${h.cultivo} expuesto a helada en ${h.meses.join(', ')}` });
-    }
-  }
-  const incidencias = (await db.listarIncidencias({ desde: new Date(Date.now() - VIGENCIA_DIAS * 864e5) }))
-    .filter((i) => i.estado === 'activa');
-  for (const i of incidencias.filter((x) => x.severidad === 'alta')) {
-    alertas.push({ id: `i${i.id}`, parcela: `${i.agente} (${i.tipo})`, tipo: 'plaga', texto: `Severidad alta reportada por ${i.tecnico}${i.cultivo ? ` en ${i.cultivo}` : ''}` });
-  }
-  res.json({
-    totales: {
-      evaluaciones: evaluaciones.length,
-      pendientes: evaluaciones.filter((e) => e.estado === 'pendiente').length,
-      clientes: new Set(evaluaciones.map((e) => e.usuario_id)).size,
-      alertas: alertas.length,
-      incidencias: incidencias.length,
-    },
-    usuarios_por_rol: contar(usuarios.filter((u) => u.activo), 'rol'),
-    fuentes_clima: contar(evaluaciones, 'fuente_clima'),
-    base_datos: db.modo(),
-    alertas,
-    evaluaciones,
-    incidencias: incidencias.map((i) => ({
-      id: i.id, tipo: i.tipo, agente: i.agente, cultivo: i.cultivo, severidad: i.severidad, lat: i.lat, lon: i.lon, creado_en: i.creado_en,
-    })),
-  });
 }));
 
 // ---------- Administración: usuarios ----------
 app.get('/api/usuarios', sesion, requierePermiso('usuarios'), ruta(async (_req, res) => res.json(await db.listarUsuarios())));
 
+// Registro (HU-ADM-01). Cuerpo: { nombre, email, password, rol, telefono? }. El correo es el identificador único.
+// Las cuentas de técnico, gestor o administrador quedan pendientes hasta que un responsable las aprueba.
+// Los errores de validación llevan "campo" para que el formulario marque dónde está el problema.
+const invalido = (campo, mensaje, status = 400) => Object.assign(error(status, mensaje), { campo });
+
 app.post('/api/usuarios', sesion, requierePermiso('usuarios'), ruta(async (req, res) => {
   const nombre = String(req.body?.nombre || '').trim().slice(0, 80);
-  const email = String(req.body?.email || '').trim().toLowerCase();
+  const email = String(req.body?.email || '').trim().toLowerCase().slice(0, 120);
   const { password, rol } = req.body || {};
-  if (!nombre || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw error(400, 'Nombre y correo válidos son obligatorios');
-  if (typeof password !== 'string' || password.length < 8) throw error(400, 'La contraseña debe tener al menos 8 caracteres');
-  if (!ROLES.includes(rol)) throw error(400, 'Rol no válido');
-  if (await db.usuarioPorEmail(email)) throw error(409, 'Ya existe un usuario con ese correo');
-  const id = await db.crearUsuario({ nombre, email, password_hash: hashPassword(password), rol });
-  res.status(201).json({ id });
+  const telefono = String(req.body?.telefono || '').replace(/[\s-]/g, '') || null;
+  if (!nombre) throw invalido('nombre', 'El nombre es obligatorio');
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw invalido('email', 'Escriba un correo válido: es el identificador de la cuenta');
+  if (telefono && !TELEFONO.test(telefono)) throw invalido('telefono', 'Escriba el teléfono con código de país, por ejemplo +59170000000');
+  if (typeof password !== 'string' || password.length < 8) throw invalido('password', 'La contraseña debe tener al menos 8 caracteres');
+  if (!ROLES.includes(rol)) throw invalido('rol', 'Elija un rol válido');
+  if (await db.usuarioPorEmail(email)) throw invalido('email', 'Ya existe una cuenta con ese correo', 409);
+  const pendiente = ROLES_CON_APROBACION.includes(rol);
+  const id = await db.crearUsuario({ nombre, email, password_hash: hashPassword(password), rol, telefono, pendiente, creadoPor: req.usuario.id });
+  // La auditoría describe la cuenta; nunca guarda la contraseña ni su hash.
+  await db.auditar({ actor: req.usuario, accion: 'usuario.registrado', objeto: email, detalle: { nombre, rol, estado: pendiente ? 'pendiente de aprobación' : 'activa' } });
+  res.status(201).json({
+    id, pendiente,
+    mensaje: pendiente
+      ? `Cuenta de ${nombre} registrada. Queda pendiente: un responsable debe aprobarla antes de que pueda ingresar.`
+      : `Cuenta de ${nombre} registrada y habilitada.`,
+  });
+}));
+
+// Aprueba o rechaza una cuenta pendiente. Cuerpo: { aprobar: true|false }.
+// Si hay otro administrador activo, quien registró la cuenta no puede aprobarla (doble control).
+app.post('/api/usuarios/:id/aprobacion', sesion, requierePermiso('usuarios'), ruta(async (req, res) => {
+  const aprobar = req.body?.aprobar;
+  if (typeof aprobar !== 'boolean') throw error(400, 'Indique si aprueba o rechaza la cuenta');
+  const u = await db.usuarioPorId(req.params.id);
+  if (!u || !u.pendiente) throw error(404, 'No hay una cuenta pendiente con ese identificador');
+  const otros = (await db.listarUsuarios()).filter((x) => x.activo && x.rol === 'administrador' && x.id !== req.usuario.id);
+  const mismo = u.creado_por === req.usuario.id;
+  if (aprobar && mismo && otros.length) throw error(403, 'Otro administrador debe aprobar las cuentas que usted registró');
+  if (!(await db.resolverPendiente(u.id, { aprobar, responsableId: req.usuario.id }))) throw error(409, 'La cuenta ya fue resuelta');
+  await db.auditar({
+    actor: req.usuario, accion: aprobar ? 'usuario.aprobado' : 'usuario.rechazado', objeto: u.email,
+    detalle: { rol: u.rol, ...(aprobar && mismo ? { aviso: 'Aprobada por quien la registró: no hay otro administrador activo' } : {}) },
+  });
+  res.json({ ok: true });
 }));
 
 app.patch('/api/usuarios/:id', sesion, requierePermiso('usuarios'), ruta(async (req, res) => {
@@ -181,8 +200,18 @@ app.patch('/api/usuarios/:id', sesion, requierePermiso('usuarios'), ruta(async (
   if (rol !== undefined && !ROLES.includes(rol)) throw error(400, 'Rol no válido');
   if (activo !== undefined && typeof activo !== 'boolean') throw error(400, 'Valor de activo no válido');
   if (Number(req.params.id) === req.usuario.id) throw error(400, 'No puede cambiar su propio rol ni desactivarse');
-  if (!(await db.actualizarUsuario(req.params.id, { rol, activo }))) throw error(404, 'Usuario no encontrado');
-  res.json({ ok: true });
+  const u = await db.usuarioPorId(req.params.id);
+  if (!u) throw error(404, 'Usuario no encontrado');
+  if (u.pendiente && activo) throw error(400, 'La cuenta está pendiente: apruébela en lugar de activarla');
+  await db.actualizarUsuario(u.id, { rol, activo });
+  // Subir a un rol con privilegios exige la misma aprobación que una cuenta nueva: queda pendiente.
+  const asciende = rol !== undefined && rol !== u.rol && ROLES_CON_APROBACION.includes(rol) && !ROLES_CON_APROBACION.includes(u.rol);
+  if (asciende) await db.dejarPendiente(u.id, req.usuario.id);
+  if (rol !== undefined && rol !== u.rol) {
+    await db.auditar({ actor: req.usuario, accion: 'usuario.rol', objeto: u.email, detalle: { antes: u.rol, ahora: rol, ...(asciende ? { estado: 'pendiente de aprobación' } : {}) } });
+  }
+  if (activo !== undefined && activo !== u.activo && !asciende) await db.auditar({ actor: req.usuario, accion: activo ? 'usuario.activado' : 'usuario.desactivado', objeto: u.email });
+  res.json({ ok: true, pendiente: asciende });
 }));
 
 // ---------- Administración: roles y permisos ----------
@@ -195,8 +224,11 @@ app.put('/api/permisos/:rol', sesion, requierePermiso('usuarios'), ruta(async (r
   const permisos = req.body?.permisos;
   if (!ROLES.includes(rol)) throw error(404, 'Rol no encontrado');
   if (!Array.isArray(permisos) || !permisos.every(esPermiso)) throw error(400, 'Lista de permisos no válida');
+  const antes = await db.permisosDeRol(rol);
   await db.setPermisosRol(rol, permisos);
-  res.json({ rol, permisos: await db.permisosDeRol(rol) });
+  const ahora = await db.permisosDeRol(rol);
+  await db.auditar({ actor: req.usuario, accion: 'permisos.cambiados', objeto: rol, detalle: { otorgados: ahora.filter((p) => !antes.includes(p)), retirados: antes.filter((p) => !ahora.includes(p)) } });
+  res.json({ rol, permisos: ahora });
 }));
 
 // ---------- Administración: respaldos ----------
@@ -218,7 +250,9 @@ app.post('/api/respaldos', sesion, requierePermiso('respaldos'), ruta(async (req
 // Exige repetir el nombre del respaldo en el cuerpo, para que no se restaure por un clic accidental.
 app.post('/api/respaldos/:nombre/restaurar', sesion, requierePermiso('respaldos'), ruta(async (req, res) => {
   if (req.body?.confirmacion !== req.params.nombre) throw error(400, 'Confirme escribiendo el nombre del respaldo');
-  res.json(await respaldos.restaurar(req.params.nombre, req.usuario.email));
+  const r = await respaldos.restaurar(req.params.nombre, req.usuario.email);
+  await db.auditar({ actor: req.usuario, accion: 'respaldo.restaurado', objeto: req.params.nombre, detalle: { estado_anterior: r.previo } });
+  res.json(r);
 }));
 
 // ---------- Alertas climáticas del usuario ----------
@@ -352,6 +386,7 @@ app.get('/api/ofertas', sesion, requierePermiso('comprar'), ruta(async (req, res
     cultivos: lista(req.query.cultivos).filter((k) => porCodigo.has(k)),
     practicas: lista(req.query.practicas).filter((p) => Object.hasOwn(PRACTICAS, p)),
     verificada: req.query.verificada === '1',
+    sello: req.query.sello === '1',
     agua: ['alta', 'media'].includes(req.query.agua) ? req.query.agua : '',
     zona: texto(req.query.zona, 40),
   };
@@ -537,10 +572,12 @@ app.get('/api/incidencias/:id/fotos/:foto', sesion, requierePermiso('incidencias
   res.send(datos);
 }));
 
+registrarRutas(app, { sesion, ruta, error, texto, catalogoPorCodigo, resumir });
+
 app.use((err, _req, res, _next) => {
   if (err.type === 'entity.too.large') return res.status(413).json({ error: 'El archivo es demasiado grande' });
   if (!err.status) console.error(err);
-  res.status(err.status || 500).json({ error: err.status ? err.message : 'Error interno' });
+  res.status(err.status || 500).json({ error: err.status ? err.message : 'Error interno', ...(err.campo ? { campo: err.campo } : {}) });
 });
 
 await db.iniciar();

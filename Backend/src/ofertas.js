@@ -15,6 +15,16 @@ export const NIVELES_AGUA = ['alta', 'media', 'baja'];
 // Uso eficiente del agua: el puntaje de agua de la rotación (0-100; 100 = casi sin riego).
 export const nivelAgua = (indice) => (indice >= 70 ? 'alta' : indice >= 40 ? 'media' : 'baja');
 
+// Sello "Gestión Hídrica Sostenible" (HU-CLI-04): la rotación necesita al menos SELLO_MIN_PCT menos riego
+// que la rotación tradicional (papa → maíz) en el mismo lugar. Es una estimación con el clima típico de
+// NASA POWER; todavía no usa humedad del suelo de SMAP ni evapotranspiración de ECOSTRESS.
+export const SELLO_MIN_PCT = 15;
+export function selloHidrico(rotacion) {
+  const ahorro = rotacion.evidencia.ahorro_agua_pct;
+  if (ahorro === undefined || ahorro === null) return { otorgado: false, ahorro_pct: null }; // evaluación anterior al sello
+  return { otorgado: ahorro >= SELLO_MIN_PCT, ahorro_pct: Math.max(0, ahorro) };
+}
+
 export function practicasDe(rotacion, porCodigo) {
   const cultivos = rotacion.cultivos.map((k) => porCodigo.get(k)).filter(Boolean);
   return {
@@ -56,6 +66,7 @@ export function vistaOferta(o, porCodigo) {
     verificada: o.estado_evaluacion === 'revisada',
     practicas,
     n_practicas: Object.values(practicas).filter(Boolean).length,
+    sello: selloHidrico(actual),
     agua: {
       indice,
       nivel: nivelAgua(indice),
@@ -73,6 +84,7 @@ export function filtrarOfertas(lista, f = {}) {
     .filter((o) => !f.cultivos?.length || f.cultivos.includes(o.cultivo))
     .filter((o) => (f.practicas || []).every((p) => o.practicas[p]))
     .filter((o) => !f.verificada || o.verificada)
+    .filter((o) => !f.sello || o.sello.otorgado)
     .filter((o) => o.agua.indice >= minimo)
     .filter((o) => !f.zona || o.zona === f.zona)
     .sort((a, b) => b.agua.indice - a.agua.indice || b.n_practicas - a.n_practicas || Number(b.verificada) - Number(a.verificada));
