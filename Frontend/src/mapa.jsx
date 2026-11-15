@@ -6,6 +6,18 @@ import 'leaflet/dist/leaflet.css';
 
 const COCHABAMBA = [-17.3895, -66.1568];
 
+// Mosaicos de OpenStreetMap. Su política de uso exige que el navegador diga desde qué sitio se piden
+// (cabecera Referer). Algunos túneles (p. ej. VS Code dev tunnels) envían "Referrer-Policy: same-origin",
+// que la suprime, y OSM responde "Access blocked". Por eso cada mosaico declara su propia política:
+// envía solo el origen del sitio, nunca la ruta ni los datos de la página. También se usa el dominio
+// único que recomienda OSM, sin los subdominios a/b/c.
+export const CAPA_OSM = {
+  url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  maxZoom: 19,
+  referrerPolicy: 'strict-origin-when-cross-origin',
+};
+
 function Clic({ onElegir }) {
   useMapEvents({ click: (e) => onElegir([e.latlng.lat, e.latlng.lng]) });
   return null;
@@ -26,7 +38,7 @@ export default function MapaReal({ puntos = [], onElegir, alto = 240, perimetro,
   const inicio = centro || (puntos[0] ? [puntos[0].lat, puntos[0].lon] : COCHABAMBA);
   return (
     <MapContainer center={inicio} zoom={zoom} className={`mapa ${onElegir ? 'elegible' : ''}`} style={{ height: alto }}>
-      <TileLayer attribution="&copy; OpenStreetMap" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" maxZoom={19} />
+      <TileLayer {...CAPA_OSM} />
       {wms?.url && (
         <WMSTileLayer url={wms.url} layers={wms.capas} format="image/png" transparent attribution={wms.atribucion}
           eventHandlers={{ tileerror: () => onErrorWms?.() }} />

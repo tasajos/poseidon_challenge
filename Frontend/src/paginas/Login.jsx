@@ -35,7 +35,7 @@ export default function Login({ onIngreso }) {
         </label>
         <button className="principal" disabled={estado.cargando}>{estado.cargando ? 'Ingresando…' : 'Ingresar'}</button>
         {estado.error && <p className="error" role="alert">{estado.error}</p>}
-        <p className="suave">Su panel depende de su rol: administrador, operativo, cliente o monitoreo.</p>
+        <p className="suave">Lo que verá depende de su rol: agricultor, técnico de campo, comprador, monitoreo o administrador. ¿No tiene cuenta? Pídala al administrador de Poseidon.</p>
       </form>
     </div>
   );

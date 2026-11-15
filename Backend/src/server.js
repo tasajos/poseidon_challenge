@@ -19,6 +19,9 @@ import { presionDePlagas, RADIO_KM, VIGENCIA_DIAS } from './plagas.js';
 import { guardarFoto, leerFoto, estadoFotos, MAX_BYTES, MAX_POR_INCIDENCIA } from './fotos.js';
 
 const app = express();
+// Solo se confía en proxies de este mismo equipo (el de Vite y el agente del túnel): req.ip es la IP
+// real del visitante, y nadie de afuera puede hacerse pasar por otro enviando X-Forwarded-For.
+app.set('trust proxy', 'loopback');
 app.use(cors());
 app.use(express.json({ limit: '50kb' }));
 

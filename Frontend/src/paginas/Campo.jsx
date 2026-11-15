@@ -3,6 +3,7 @@ import { MapContainer, TileLayer, LayersControl, CircleMarker, Circle, Tooltip, 
 import { api } from '../api.js';
 import { COCHABAMBA, Pestanas, Stat, fechaHora, useDatos } from '../componentes.jsx';
 import { comprimir } from '../imagen.js';
+import { CAPA_OSM } from '../mapa.jsx';
 import 'leaflet/dist/leaflet.css';
 
 // Técnico de campo: marca plagas, enfermedades y deficiencias con GPS y fotos (HU-OPT-02).
@@ -67,10 +68,10 @@ function MapaCampo({ punto, onElegir, incidencias = [], alto = 320, onAbrir }) {
     <MapContainer center={centro} zoom={punto ? 17 : 11} className={`mapa ${onElegir ? 'elegible' : ''}`} style={{ height: alto }}>
       <LayersControl position="topright">
         <LayersControl.BaseLayer checked name="Mapa">
-          <TileLayer attribution="&copy; OpenStreetMap" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" maxZoom={19} />
+          <TileLayer {...CAPA_OSM} />
         </LayersControl.BaseLayer>
         <LayersControl.BaseLayer name="Satélite">
-          <TileLayer attribution="Imágenes &copy; Esri, Maxar, Earthstar Geographics"
+          <TileLayer attribution="Imágenes &copy; Esri, Maxar, Earthstar Geographics" referrerPolicy={CAPA_OSM.referrerPolicy}
             url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" maxZoom={19} />
         </LayersControl.BaseLayer>
       </LayersControl>
