@@ -1,4 +1,4 @@
-// NASA en vivo (agricultor): consulta en el momento a NASA POWER, SRTM y MODIS para una de sus parcelas,
+// NASA en vivo (agricultor y administrador): consulta en el momento a NASA POWER, SRTM y MODIS para una parcela,
 // muestra los datos en un tablero y un mapa, y una consola con cada consulta que hizo el servidor.
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
@@ -43,6 +43,17 @@ export default function NasaVivo({ usuario, irA }) {
 
   if (error && !datos) return <p className="error">{error}</p>;
   if (!datos) return <p className="cargando">Consultando a la NASA…</p>;
+  const admin = datos.alcance === 'todas';
+  if (!datos.parcelas.length && admin) {
+    return (
+      <div className="caja nasa-sin-parcela">
+        <h2>Todavía no hay parcelas registradas</h2>
+        <p>Los datos de la NASA se piden para el lugar de una parcela. Cuando algún agricultor registre la suya en
+          <b> Mi finca</b>, podrá verla aquí.</p>
+        <MapaNasa datos={{ parcelas: [], parcela: null }} admin />
+      </div>
+    );
+  }
   if (!datos.parcelas.length) {
     const puedeRegistrar = puede(usuario, 'evaluar');
     return (
@@ -68,7 +79,7 @@ export default function NasaVivo({ usuario, irA }) {
         {datos.parcelas.length > 1 ? (
           <label className="campo nasa-parcela">Parcela
             <select value={parcelaId ?? ''} onChange={(e) => elegir(Number(e.target.value))} disabled={consultando}>
-              {datos.parcelas.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+              {datos.parcelas.map((p) => <option key={p.id} value={p.id}>{admin && p.agricultor ? `${p.nombre} — ${p.agricultor}` : p.nombre}</option>)}
             </select>
           </label>
         ) : <p className="nasa-parcela"><span className="suave">Parcela</span><b>{datos.parcela.nombre}</b></p>}
@@ -84,36 +95,21 @@ export default function NasaVivo({ usuario, irA }) {
 
       <Indicadores power={power} terreno={terreno} ndvi={ndvi} />
 
+      <MapaNasa datos={datos} power={power} terreno={terreno} elegir={elegir} admin={admin} />
+
       <div className="nasa-rejilla">
         <div className="caja">
           <h2>Temperatura de cada día</h2>
           {power.error ? <p className="aviso">NASA POWER no respondió: {power.error}. Pruebe de nuevo en unos minutos.</p> : (
             <>
-              <p className="suave">Últimos {power.dias.length} días publicados por <Termino id="nasa-power">NASA POWER</Termino> para el lugar de su parcela.</p>
+              <p className="suave">Últimos {power.dias.length} días publicados por <Termino id="nasa-power">NASA POWER</Termino> para el lugar de {admin ? 'la' : 'su'} parcela.</p>
               <GraficaTemperaturaDiaria dias={power.dias} />
               <h2>Lluvia de cada día</h2>
               <GraficaLluviaDiaria dias={power.dias} />
             </>
           )}
         </div>
-        <div className="nasa-lateral">
-          <div className="caja">
-            <h2>Mapa de sus parcelas</h2>
-            <p className="suave">Toque un punto para ver los datos de esa parcela.</p>
-            <Mapa alto={260} zoom={12} centro={[datos.parcela.lat, datos.parcela.lon]}
-              perimetro={datos.parcelas.find((p) => p.id === datos.parcela.id)?.perimetro || undefined}
-              puntos={datos.parcelas.map((p) => ({
-                id: p.id, lat: p.lat, lon: p.lon, fijo: p.id === datos.parcela.id,
-                color: p.id === datos.parcela.id ? '#cf6f14' : '#1f6b3a', radio: p.id === datos.parcela.id ? 11 : 8,
-                texto: p.id === datos.parcela.id && power.resumen
-                  ? `${p.nombre}: mín ${num(power.resumen.tmin.valor)} °C · ${terreno.elevacion_m ? `${num(terreno.elevacion_m, 0)} m` : ''}`
-                  : p.nombre,
-              }))}
-              onPunto={(id) => id !== datos.parcela.id && elegir(id)} />
-            <p className="suave nasa-coord">Punto consultado: {num(datos.parcela.lat, 4)}, {num(datos.parcela.lon, 4)}</p>
-          </div>
-          <Consola alNuevoEvento={alNuevoEvento} />
-        </div>
+        <Consola alNuevoEvento={alNuevoEvento} />
       </div>
 
       <details className="caja nasa-fuentes">
@@ -125,6 +121,96 @@ export default function NasaVivo({ usuario, irA }) {
         </ul>
       </details>
     </div>
+  );
+}
+
+// ---------- Mapa con capas gratuitas de la NASA (GIBS, sin clave) ----------
+// GIBS publica mosaicos listos para el mapa. Las capas diarias llegan con 1 a 2 días de retraso; viento y
+// temperatura del aire (MERRA-2) son promedios mensuales, que la NASA publica con 2 a 3 meses de retraso.
+const ayer = () => new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+const gibs = (id, tiempo, matriz, ext) => `https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${id}/default/${tiempo}/${matriz}/{z}/{y}/{x}.${ext}`;
+const LEYENDA = (nombre) => `https://gibs.earthdata.nasa.gov/legends/${nombre}_H.svg`;
+const ATRIBUCION_NASA = 'Imágenes: <a href="https://earthdata.nasa.gov/gibs">NASA GIBS</a>';
+const CAPAS_NASA = [
+  { clave: 'calles', texto: 'Calles', nota: 'Mapa de calles de OpenStreetMap, sin capa de la NASA.' },
+  {
+    clave: 'satelite', texto: 'Satélite', base: true, maxNativeZoom: 9,
+    url: () => gibs('VIIRS_NOAA20_CorrectedReflectance_TrueColor', ayer(), 'GoogleMapsCompatible_Level9', 'jpg'),
+    nota: () => `Foto del satélite VIIRS (NOAA-20) del ${diaCorto(ayer())}: se ven las nubes y el terreno. Celdas de 375 m.`,
+  },
+  {
+    clave: 'lluvia', texto: 'Lluvia', maxNativeZoom: 6, opacidad: 0.75, leyenda: LEYENDA('GPM_Precipitation_Rate'),
+    url: () => gibs('IMERG_Precipitation_Rate', 'default', 'GoogleMapsCompatible_Level6', 'png'),
+    nota: 'Lluvia del último día publicado por la misión GPM (IMERG), en mm por hora. Celdas de unos 10 km.',
+  },
+  {
+    clave: 'suelo', texto: 'Temperatura del suelo', maxNativeZoom: 7, opacidad: 0.7, leyenda: LEYENDA('MODIS_Land_Surface_Temp'),
+    url: () => gibs('MODIS_Terra_Land_Surface_Temp_Day', ayer(), 'GoogleMapsCompatible_Level7', 'png'),
+    nota: () => `Temperatura de la superficie de día, medida por MODIS (Terra) el ${diaCorto(ayer())}. Donde había nubes no hay dato.`,
+  },
+  {
+    clave: 'viento', texto: 'Viento (mensual)', maxNativeZoom: 6, opacidad: 0.7, leyenda: LEYENDA('MERRA2_Surface_Wind_Speed_Monthly'),
+    url: () => gibs('MERRA2_Surface_Wind_Speed_Monthly', 'default', 'GoogleMapsCompatible_Level6', 'png'),
+    nota: 'Velocidad media del viento cerca del suelo en el último mes publicado (modelo MERRA-2 de la NASA, con 2 a 3 meses de retraso). La NASA no publica mapas gratuitos de viento al momento.',
+  },
+  {
+    clave: 'aire', texto: 'Temperatura del aire (mensual)', maxNativeZoom: 6, opacidad: 0.7, leyenda: LEYENDA('MERRA2_2m_Air_Temperature_Monthly'),
+    url: () => gibs('MERRA2_2m_Air_Temperature_Monthly', 'default', 'GoogleMapsCompatible_Level6', 'png'),
+    nota: 'Temperatura media del aire a 2 m en el último mes publicado (MERRA-2, con 2 a 3 meses de retraso).',
+  },
+];
+const valorDe = (v) => (typeof v === 'function' ? v() : v);
+
+function MapaNasa({ datos, power, terreno, elegir, admin }) {
+  const ligero = useLigero();
+  const [clave, setClave] = useState('calles');
+  const [zoom, setZoom] = useState(null);
+  const elegida = CAPAS_NASA.find((c) => c.clave === clave);
+  const capa = !elegida.url ? { clave: elegida.clave } : {
+    clave: elegida.clave, url: elegida.url(), base: elegida.base, maxNativeZoom: elegida.maxNativeZoom,
+    opacidad: elegida.opacidad, atribucion: ATRIBUCION_NASA,
+  };
+  const p = datos.parcela;
+  const centro = p ? [p.lat, p.lon] : [-17.3895, -66.1568];
+  // Las capas de la NASA tienen celdas de kilómetros: se aleja el mapa para verlas; el de calles vuelve cerca.
+  const zoomDe = (c) => (c === 'calles' ? 12 : c === 'satelite' ? 9 : 6);
+  const cambiar = (c) => { setClave(c); setZoom(zoomDe(c)); };
+  const lat = centro[0], lon = centro[1];
+  const caja = [lon - 3, lat - 2, lon + 3, lat + 2].map((v) => v.toFixed(3)).join(',');
+  const worldview = `https://worldview.earthdata.nasa.gov/?v=${caja}`
+    + `&l=Reference_Labels_15m,Reference_Features_15m,Coastlines_15m,IMERG_Precipitation_Rate,VIIRS_NOAA20_CorrectedReflectance_TrueColor&t=${ayer()}`;
+  return (
+    <section className="caja nasa-mapa" aria-labelledby="titulo-mapa-nasa">
+      <div className="nasa-mapa-cabeza">
+        <h2 id="titulo-mapa-nasa">{admin ? 'Mapa de las parcelas' : 'Mapa de sus parcelas'}</h2>
+        <a className="secundario chico" href={worldview} target="_blank" rel="noopener noreferrer">Abrir en NASA Worldview ↗</a>
+      </div>
+      {!ligero && (
+        <div className="chips nasa-capas" role="radiogroup" aria-label="Capa del mapa">
+          {CAPAS_NASA.map((c) => (
+            <button key={c.clave} type="button" role="radio" aria-checked={clave === c.clave}
+              className={clave === c.clave ? 'activa' : ''} onClick={() => cambiar(c.clave)}>{c.texto}</button>
+          ))}
+        </div>
+      )}
+      <Mapa alto={520} zoom={zoom || 12} centro={centro} capa={capa}
+        perimetro={p ? datos.parcelas.find((x) => x.id === p.id)?.perimetro || undefined : undefined}
+        puntos={datos.parcelas.map((x) => ({
+          id: x.id, lat: x.lat, lon: x.lon, fijo: p && x.id === p.id,
+          color: p && x.id === p.id ? '#cf6f14' : '#1f6b3a', radio: p && x.id === p.id ? 11 : 8,
+          texto: p && x.id === p.id && power?.resumen
+            ? `${x.nombre}: mín ${num(power.resumen.tmin.valor)} °C${terreno?.elevacion_m ? ` · ${num(terreno.elevacion_m, 0)} m` : ''}`
+            : admin && x.agricultor ? `${x.nombre} (${x.agricultor})` : x.nombre,
+        }))}
+        onPunto={elegir ? (id) => id !== p?.id && elegir(id) : undefined} />
+      {!ligero && (
+        <div className="nasa-mapa-pie">
+          <p className="suave">{valorDe(elegida.nota)}</p>
+          {elegida.leyenda && <img className="nasa-leyenda" src={elegida.leyenda} alt={`Escala de colores de la capa ${elegida.texto}`} loading="lazy" />}
+        </div>
+      )}
+      {p && <p className="suave nasa-coord">Punto consultado: {num(p.lat, 4)}, {num(p.lon, 4)}{datos.parcelas.length > 1 ? ' · toque otro punto para ver esa parcela' : ''}</p>}
+    </section>
   );
 }
 

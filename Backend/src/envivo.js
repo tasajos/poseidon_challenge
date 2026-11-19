@@ -92,19 +92,26 @@ export function resumirDiario(dias, normal) {
   };
 }
 
-// La vista es de todos los agricultores (rol cliente), tengan o no el permiso evaluar; otros roles la usan
-// solo si el administrador les dio ese permiso.
-const delAgricultor = (req, res, next) => (req.usuario.rol === 'cliente' || tienePermiso(req.usuario, 'evaluar')
+// La vista es de todos los agricultores (rol cliente) y del administrador, tengan o no el permiso evaluar;
+// otros roles la usan solo si el administrador les dio ese permiso.
+const ROLES_VISTA = ['cliente', 'administrador'];
+const delAgricultor = (req, res, next) => (ROLES_VISTA.includes(req.usuario.rol) || tienePermiso(req.usuario, 'evaluar')
   ? next()
-  : res.status(403).json({ error: 'Esta sección es para agricultores.' }));
+  : res.status(403).json({ error: 'Esta sección es para agricultores y administradores.' }));
+// El administrador (o quien ve todas las parcelas) elige entre las parcelas de todos los agricultores.
+const veTodas = (u) => u.rol === 'administrador' || tienePermiso(u, 'ver_todas');
 
 export function registrarNasaVivo(app, { sesion, ruta, error }) {
   // ?parcela=ID (por defecto la primera) · ?fresco=1 vuelve a consultar a la NASA sin usar la caché.
   app.get('/api/nasa/en-vivo', sesion, delAgricultor, ruta(async (req, res) => {
     const u = req.usuario;
-    const parcelas = (await db.listarParcelas({ usuarioId: u.id })).sort((a, b) => a.id - b.id);
-    const lista = parcelas.map((p) => ({ id: p.id, nombre: p.nombre, lat: p.lat, lon: p.lon, perimetro: p.perimetro || null }));
-    if (!parcelas.length) return res.json({ parcelas: [] });
+    const todas = veTodas(u);
+    const parcelas = (await db.listarParcelas(todas ? {} : { usuarioId: u.id })).sort((a, b) => a.id - b.id);
+    const lista = parcelas.map((p) => ({
+      id: p.id, nombre: p.nombre, lat: p.lat, lon: p.lon, perimetro: p.perimetro || null, ...(todas ? { agricultor: p.agricultor || null } : {}),
+    }));
+    const alcance = todas ? 'todas' : 'propias';
+    if (!parcelas.length) return res.json({ parcelas: [], alcance });
     let p = parcelas[0];
     if (req.query.parcela !== undefined) {
       p = parcelas.find((x) => String(x.id) === String(req.query.parcela));
@@ -142,6 +149,7 @@ export function registrarNasaVivo(app, { sesion, ruta, error }) {
 
     res.json({
       parcelas: lista,
+      alcance,
       parcela: { id: p.id, nombre: p.nombre, lat: p.lat, lon: p.lon },
       aviso,
       power: diario.error

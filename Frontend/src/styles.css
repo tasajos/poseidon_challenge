@@ -1073,7 +1073,14 @@ html.ligero .stat:hover { transform: none; }
 .nasa-stats .stat small { line-height: 1.35; margin-top: 2px; }
 .nasa-rejilla { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 16px; align-items: start; margin-bottom: 16px; }
 .nasa-rejilla .viz-lienzo { max-width: none; }
-.nasa-lateral { display: grid; gap: 16px; min-width: 0; }
+.nasa-mapa { margin-bottom: 16px; }
+.nasa-mapa-cabeza { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.nasa-mapa-cabeza h2 { margin: 0; }
+.nasa-mapa-cabeza a.secundario { margin: 0; text-decoration: none; display: inline-flex; align-items: center; }
+.nasa-capas { margin: 10px 0 12px; }
+.nasa-mapa-pie { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 20px; margin-top: 8px; }
+.nasa-mapa-pie p { flex: 1 1 280px; margin: 0; font-size: 13px; }
+.nasa-leyenda { width: 100%; max-width: 380px; height: auto; background: #fff; border-radius: 8px; border: 1px solid var(--linea); padding: 4px; }
 .nasa-coord { font-size: 12px; margin: 6px 0 0; font-variant-numeric: tabular-nums; }
 .nasa-sin-parcela .principal { width: auto; padding-left: 28px; padding-right: 28px; }
 .nasa-fuentes summary { cursor: pointer; font-weight: 700; }
@@ -1118,6 +1125,7 @@ html.ligero .consola-estado.activa::before { animation: none; }
   .nasa-barra .principal, .nasa-sin-parcela .principal { width: 100%; }
   .nasa-stats { grid-template-columns: 1fr 1fr; }
   .consola-pantalla { height: 240px; font-size: 11px; }
+  .nasa-mapa .mapa { height: 380px !important; }
   /* La gráfica se reduce a ~55 %: el texto del SVG se agranda para leerse a unos 10 px */
   .nasa-rejilla .viz-eje { font-size: 18px; }
   .nasa-rejilla .viz-etiqueta { font-size: 18px; }

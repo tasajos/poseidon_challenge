@@ -15,8 +15,9 @@ Para personas con el rol **`administrador`**. Si todavía no sabe entrar a Posei
 4. **Revisar la auditoría**: quién hizo qué y cuándo.
 5. **Crear respaldos y restaurar** la base de datos a un punto anterior.
 6. **Ver el estado del sistema**: base de datos, alertas, SMS y almacenamiento de fotos.
+7. **Ver los datos de la NASA en vivo** de cualquier parcela registrada, con mapas de lluvia, viento y temperatura.
 
-En el menú verá: **Asistencia técnica**, **Monitoreo**, **Administración** y **Glosario**. Al entrar se abre
+En el menú verá: **NASA en vivo**, **Asistencia técnica**, **Monitoreo**, **Administración** y **Glosario**. Al entrar se abre
 *Administración*, con estas pestañas: **Usuarios**, **Roles y permisos**, **Parcelas y técnicos**, **Auditoría**,
 **Respaldos**, **Sistema** y **Cultivos**.
 
@@ -213,6 +214,23 @@ deben validarse con un agrónomo local.
   los agricultores y podrá dejar notas técnicas. Ver el [Manual del técnico](03-tecnico.md).
 - **Monitoreo**: además de los resúmenes, ve la pestaña **Detalle por parcela**, con los datos individuales. Ver el
   [Manual de monitoreo](05-monitoreo.md).
+
+- **NASA en vivo**: la misma vista del agricultor (ver la sección 7 del [Manual del agricultor](02-agricultor.md)),
+  pero en **Parcela** puede elegir la de **cualquier agricultor** (aparece "nombre de la parcela — agricultor").
+  Pulse **Consultar ahora a la NASA** para pedir los datos en ese momento. La consola muestra solo las consultas
+  que hizo usted. Si todavía ningún agricultor registró una parcela, la página lo avisa y muestra igual el mapa.
+
+- **Mapa**: grande, con botones arriba para cambiar lo que muestra. Todas las capas son gratuitas y vienen de la
+  NASA (servicio GIBS):
+  - **Calles**: el mapa de siempre.
+  - **Satélite**: la foto del satélite de ayer; se ven las nubes y el terreno.
+  - **Lluvia**: dónde llovió el último día publicado (misión GPM), con su escala de colores debajo.
+  - **Temperatura del suelo**: qué tan caliente estuvo la superficie de día (MODIS). Donde había nubes no hay color.
+  - **Viento (mensual)** y **Temperatura del aire (mensual)**: promedios del último mes publicado (modelo MERRA-2,
+    con 2 a 3 meses de retraso). La NASA no ofrece mapas gratuitos de viento al momento.
+
+  Al elegir una capa de la NASA el mapa se aleja, porque sus cuadros miden kilómetros. **Abrir en NASA Worldview**
+  abre el visor oficial de la NASA en otra pestaña, centrado en la parcela, con más capas y fechas.
 
 ---
 

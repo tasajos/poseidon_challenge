@@ -32,13 +32,26 @@ function Recentrar({ centro, zoom }) {
   return null;
 }
 
+// Cambia el acercamiento cuando la vista lo pide (p. ej. al elegir una capa de la NASA de celdas grandes).
+function AjustarZoom({ zoom }) {
+  const mapa = useMap();
+  useEffect(() => { if (zoom && mapa.getZoom() !== zoom) mapa.setZoom(zoom); }, [zoom]); // eslint-disable-line react-hooks/exhaustive-deps
+  return null;
+}
+
 // puntos: [{ id, lat, lon, texto, alerta, color, radio, fijo }]. Con onElegir, el mapa permite marcar.
 // perimetro: [[lat, lon], ...] en dibujo. wms: { url, capas, atribucion }. geojson: límites a dibujar.
-export default function MapaReal({ puntos = [], onElegir, alto = 240, perimetro, centro, zoom = 10, wms, geojson, onErrorWms, onPunto }) {
+// capa: mosaicos extra (p. ej. NASA GIBS) { clave, url, maxNativeZoom, opacidad, atribucion, base }.
+// Con base: true reemplaza al mapa de calles (imagen satelital); si no, se dibuja encima con transparencia.
+export default function MapaReal({ puntos = [], onElegir, alto = 240, perimetro, centro, zoom = 10, wms, geojson, onErrorWms, onPunto, capa }) {
   const inicio = centro || (puntos[0] ? [puntos[0].lat, puntos[0].lon] : COCHABAMBA);
   return (
     <MapContainer center={inicio} zoom={zoom} className={`mapa ${onElegir ? 'elegible' : ''}`} style={{ height: alto }}>
-      <TileLayer {...CAPA_OSM} />
+      {!capa?.base && <TileLayer {...CAPA_OSM} />}
+      {capa?.url && (
+        <TileLayer key={capa.clave} url={capa.url} attribution={capa.atribucion} maxNativeZoom={capa.maxNativeZoom} maxZoom={19}
+          opacity={capa.base ? 1 : capa.opacidad ?? 0.7} />
+      )}
       {wms?.url && (
         <WMSTileLayer url={wms.url} layers={wms.capas} format="image/png" transparent attribution={wms.atribucion}
           eventHandlers={{ tileerror: () => onErrorWms?.() }} />
@@ -46,6 +59,7 @@ export default function MapaReal({ puntos = [], onElegir, alto = 240, perimetro,
       {geojson && <GeoJSON data={geojson} style={{ color: '#1E4E8C', weight: 1.5, fillOpacity: 0.04 }} />}
       {onElegir && <Clic onElegir={onElegir} />}
       <Recentrar centro={centro} zoom={zoom > 12 ? zoom : undefined} />
+      {capa && <AjustarZoom zoom={zoom} />}
       {perimetro?.length >= 3 && <Polygon positions={perimetro} pathOptions={{ color: '#1E4E8C', weight: 2, fillOpacity: 0.15 }} />}
       {perimetro?.length === 2 && <Polyline positions={perimetro} pathOptions={{ color: '#1E4E8C', weight: 2 }} />}
       {perimetro?.map((p, i) => (

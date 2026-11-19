@@ -345,7 +345,17 @@ pulse **Crear mi parcela** y lo lleva a *Mi finca*. Los datos se piden para el l
 - **Temperatura de cada día**: la línea naranja es la máxima y la azul la mínima. La línea gris marca 0 °C:
   si la azul la toca, ese día hubo helada. Pase el dedo o el ratón por la gráfica para ver cada día.
 - **Lluvia de cada día**: cada barra son los milímetros de lluvia de un día.
-- **Mapa de sus parcelas**: la parcela elegida es el punto naranja.
+- **Mapa de sus parcelas**: la parcela elegida es el punto naranja. Es grande, con botones arriba para cambiar lo que muestra. Todas las capas son gratuitas y vienen de la
+  NASA (servicio GIBS):
+  - **Calles**: el mapa de siempre.
+  - **Satélite**: la foto del satélite de ayer; se ven las nubes y el terreno.
+  - **Lluvia**: dónde llovió el último día publicado (misión GPM), con su escala de colores debajo.
+  - **Temperatura del suelo**: qué tan caliente estuvo la superficie de día (MODIS). Donde había nubes no hay color.
+  - **Viento (mensual)** y **Temperatura del aire (mensual)**: promedios del último mes publicado (modelo MERRA-2,
+    con 2 a 3 meses de retraso). La NASA no ofrece mapas gratuitos de viento al momento.
+
+  Al elegir una capa de la NASA el mapa se aleja, porque sus cuadros miden kilómetros. **Abrir en NASA Worldview**
+  abre el visor oficial de la NASA en otra pestaña, centrado en la parcela, con más capas y fechas.
 - **Consola de la NASA**: una lista que se actualiza sola, con cada pedido que Poseidon hizo a la NASA por usted.
   - **DESCARGA**: el dato acaba de llegar de la NASA (con el tiempo que tardó).
   - **CACHÉ** o **GUARDADO**: se usó un dato que ya había llegado antes; no hacía falta pedirlo otra vez.
